@@ -13,7 +13,6 @@ SCOPES = ['https://www.googleapis.com/auth/drive.file']
 @st.cache_data
 def load_data():
     df = pd.read_excel("حالة تسجيل المذكرات.xlsx")
-    df.columns = df.columns.str.strip()  # إزالة الفراغات من أسماء الأعمدة
     df = df.astype(str)
     return df
 
@@ -102,10 +101,10 @@ st.markdown("""
 
 st.markdown("""
     <div class="header-container">
-        <img src="https://drive.google.com/uc?id=1sBEUeqEF6tKTglXP3ePMtV4BN_929R9Y" class="header-logo">
         <h2>📚 منصة إيداع مذكرات التخرج</h2>
-        <h4>كلية الحقوق والعلوم السياسية</h4>
-        <h5>جامعة برج بوعريريج</h5>
+        <h4>جامعة برج بوعريريج</h4>
+        <h5>كلية الحقوق والعلوم السياسية</h5>
+        
     </div>
 """, unsafe_allow_html=True)
 
@@ -114,73 +113,39 @@ st.markdown("يرجى إدخال **رقم المذكرة** و **كلمة الس�
 note_number = st.text_input('رقم المذكرة', placeholder='أدخل رقم المذكرة هنا')
 password = st.text_input('كلمة السر', type='password', placeholder='أدخل كلمة السر')
 
-if 'upload_success' not in st.session_state:
-    st.session_state.upload_success = False
-if 'file_id' not in st.session_state:
-    st.session_state.file_id = None
-
 if st.button("✅ تأكيد"):
     if note_number and password:
         df = load_data()
-
-        required_columns = ['رقم المذكرة', 'كلمة السر', 'عنوان المذكرة', 'الطالب الأول', 'الطالب الثاني']
-        missing_columns = [col for col in required_columns if col not in df.columns]
-
-        if missing_columns:
-            st.error("⚠️ بعض الأعمدة مفقودة في ملف Excel: " + ", ".join(missing_columns))
-            st.stop()
-
-        # تنظيف القيم
-        df['رقم المذكرة'] = df['رقم المذكرة'].str.strip()
-        df['كلمة السر'] = df['كلمة السر'].str.strip()
-
-        input_note = note_number.strip()
-        input_pass = password.strip()
-
-        match = df[(df['رقم المذكرة'].str.lower() == input_note.lower()) & (df['كلمة السر'].str.lower() == input_pass.lower())]
+        match = df[(df['رقم المذكرة'] == note_number) & (df['كلمة السر'] == password)]
 
         if not match.empty:
             memo_info = match.iloc[0]
             st.success("✅ تم التحقق من المعلومات بنجاح")
             st.markdown(f"""
                 ### 📄 عنوان المذكرة:
-                {memo_info.get('عنوان المذكرة', 'غير متوفر')}
+                {memo_info['عنوان المذكرة']}
                 ### 🎓 الطلبة:
-                - {memo_info.get('الطالب الأول', '---')}
-                {f"- {memo_info.get('الطالب الثاني')}" if pd.notna(memo_info.get('الطالب الثاني')) else ""}
+                - {memo_info['الطالب 1']}
+                {f"- {memo_info['الطالب 2']}" if 'الطالب 2' in memo_info and pd.notna(memo_info['الطالب 2']) else ""}
             """)
 
             st.markdown("---")
             st.subheader("📤 رفع ملف المذكرة")
-
             uploaded_file = st.file_uploader('اختر ملف PDF للمذكرة:', type=['pdf'])
 
-            if uploaded_file is not None and not st.session_state.upload_success:
-                temp_file_path = "temp.pdf"
-                with open(temp_file_path, "wb") as f:
+            if uploaded_file:
+                with open("temp.pdf", "wb") as f:
                     f.write(uploaded_file.read())
 
-                try:
-                    with st.spinner("🚀 جاري رفع الملف إلى Google Drive..."):
-                        service = get_drive_service()
-                        file_id = upload_to_drive(temp_file_path, f"Memoire_{input_note}.pdf", service)
-                    st.session_state.upload_success = True
-                    st.session_state.file_id = file_id
-                except Exception as e:
-                    st.error(f"❌ حدث خطأ أثناء رفع الملف: {e}")
-                finally:
-                    if os.path.exists(temp_file_path):
-                        os.remove(temp_file_path)
+                with st.spinner("🚀 جاري رفع الملف إلى Google Drive..."):
+                    service = get_drive_service()
+                    file_id = upload_to_drive("temp.pdf", f"Memoire_{note_number}.pdf", service)
+                    os.remove("temp.pdf")
 
-            if st.session_state.upload_success:
-                st.success("✅ تم إيداع المذكرة بنجاح!")
-                st.info(f'📎 معرف الملف على Drive: `{st.session_state.file_id}`')
-                if st.button("رفع مذكرة أخرى"):
-                    st.session_state.upload_success = False
-                    st.session_state.file_id = None
-                    st.experimental_rerun()
+                st.success("✅ تم رفع الملف بنجاح!")
+                st.info(f'📎 معرف الملف على Drive: `{file_id}`')
 
         else:
-            st.error("❌ رقم المذكرة أو كلمة السر غير صحيحة. يرجى التحقق والمحاولة مجددًا.")
+            st.error("⚠️ رقم المذكرة أو كلمة السر غير صحيحة. يرجى التحقق والمحاولة مجددًا.")
     else:
         st.warning("⚠️ يرجى تعبئة رقم المذكرة وكلمة السر.")
