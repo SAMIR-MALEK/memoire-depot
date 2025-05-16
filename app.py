@@ -101,10 +101,10 @@ st.markdown("""
 
 st.markdown("""
     <div class="header-container">
+        <img src="https://drive.google.com/uc?id=1sBEUeqEF6tKTglXP3ePMtV4BN_929R9Y" class="header-logo">
         <h2>📚 منصة إيداع مذكرات التخرج</h2>
-        <h4>جامعة برج بوعريريج</h4>
-        <h5>كلية الحقوق والعلوم السياسية</h5>
-        
+        <h4>كلية الحقوق والعلوم السياسية</h4>
+        <h5>جامعة برج بوعريريج</h5>
     </div>
 """, unsafe_allow_html=True)
 
