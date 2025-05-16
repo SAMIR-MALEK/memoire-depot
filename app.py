@@ -1,4 +1,6 @@
 import streamlit as st
+st.set_page_config(page_title="منصة إيداع المذكرات", page_icon="📚", layout="centered")
+
 import pandas as pd
 import os
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -54,7 +56,6 @@ def upload_to_drive(file_path, file_name, service):
 
 # ========================== واجهة التطبيق ===========================
 
-st.set_page_config(page_title="منصة إيداع المذكرات", page_icon="📚", layout="centered")
 st.markdown("""
     <style>
     .main {
