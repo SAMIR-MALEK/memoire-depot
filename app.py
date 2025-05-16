@@ -13,6 +13,7 @@ SCOPES = ['https://www.googleapis.com/auth/drive.file']
 @st.cache_data
 def load_data():
     df = pd.read_excel("حالة تسجيل المذكرات.xlsx")
+    df.columns = df.columns.str.strip()  # إزالة الفراغات من أسماء الأعمدة
     df = df.astype(str)
     return df
 
@@ -116,6 +117,14 @@ password = st.text_input('كلمة السر', type='password', placeholder='أد
 if st.button("✅ تأكيد"):
     if note_number and password:
         df = load_data()
+
+        required_columns = ['رقم المذكرة', 'كلمة السر', 'عنوان المذكرة', 'الطالب 1', 'الطالب 2']
+        missing_columns = [col for col in required_columns if col not in df.columns]
+
+        if missing_columns:
+            st.error("⚠️ بعض الأعمدة مفقودة في ملف Excel: " + ", ".join(missing_columns))
+            st.stop()
+
         match = df[(df['رقم المذكرة'] == note_number) & (df['كلمة السر'] == password)]
 
         if not match.empty:
@@ -123,10 +132,10 @@ if st.button("✅ تأكيد"):
             st.success("✅ تم التحقق من المعلومات بنجاح")
             st.markdown(f"""
                 ### 📄 عنوان المذكرة:
-                {memo_info['عنوان المذكرة']}
+                {memo_info.get('عنوان المذكرة', 'غير متوفر')}
                 ### 🎓 الطلبة:
-                - {memo_info['الطالب 1']}
-                {f"- {memo_info['الطالب 2']}" if 'الطالب 2' in memo_info and pd.notna(memo_info['الطالب 2']) else ""}
+                - {memo_info.get('الطالب 1', '---')}
+                {f"- {memo_info.get('الطالب 2')}" if pd.notna(memo_info.get('الطالب 2')) else ""}
             """)
 
             st.markdown("---")
@@ -146,6 +155,6 @@ if st.button("✅ تأكيد"):
                 st.info(f'📎 معرف الملف على Drive: `{file_id}`')
 
         else:
-            st.error("⚠️ رقم المذكرة أو كلمة السر غير صحيحة. يرجى التحقق والمحاولة مجددًا.")
+            st.error("❌ رقم المذكرة أو كلمة السر غير صحيحة. يرجى التحقق والمحاولة مجددًا.")
     else:
         st.warning("⚠️ يرجى تعبئة رقم المذكرة وكلمة السر.")
