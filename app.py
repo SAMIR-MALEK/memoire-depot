@@ -20,5 +20,3 @@ st.markdown(""" <div class="header-container"> <img src="https://drive.google.co
 
 if st.checkbox("عرض مثال من ملف Excel"): df_test = load_data() df_test.columns = df_test.columns.str.strip() sample = df_test[['رقم المذكرة', 'كلمة السر', 'عنوان المذكرة']].head(1).to_dict(orient='records')[0] st.info(f""" ### بيانات اختبارية: - رقم المذكرة: {sample['رقم المذكرة']} - كلمة السر: {sample['كلمة السر']} - العنوان: {sample['عنوان المذكرة']} """)
 
-الخطوات التالية تبقى كما هي (التحقق، رفع الملف، إظهار الرسائل)
-
