@@ -1,33 +1,41 @@
 import streamlit as st
 import pandas as pd
 import os
-from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
-from PIL import Image
 
-# إعدادات Google Drive
 FOLDER_ID = '1TfhvUA9oqvSlj9TuLjkyHi5xsC5svY1D'
 SCOPES = ['https://www.googleapis.com/auth/drive.file']
 
-# تحميل بيانات المذكرات
 @st.cache_data
 def load_data():
     df = pd.read_excel("حالة تسجيل المذكرات.xlsx")
     df = df.astype(str)
     return df
 
-# المصادقة مع Google Drive
 @st.cache_resource
 def get_drive_service():
-    flow = InstalledAppFlow.from_client_secrets_file(
-        'client_secret_657345545277-71v49s3jk4hme26i7knjlj9hlkutgpdm.apps.googleusercontent.com.json', SCOPES)
+    client_id = st.secrets["google_oauth"]["client_id"]
+    client_secret = st.secrets["google_oauth"]["client_secret"]
+    redirect_uri = st.secrets["google_oauth"]["redirect_uri"]
+
+    flow = InstalledAppFlow.from_client_config(
+        {
+            "installed": {
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "redirect_uris": [redirect_uri],
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token"
+            }
+        },
+        SCOPES,
+    )
     creds = flow.run_local_server(port=0)
     service = build('drive', 'v3', credentials=creds)
     return service
 
-# رفع الملف إلى Google Drive
 def upload_to_drive(file_path, file_name, service):
     file_metadata = {
         'name': file_name,
@@ -38,6 +46,7 @@ def upload_to_drive(file_path, file_name, service):
     return uploaded.get('id')
 
 # ========================== واجهة التطبيق ===========================
+
 st.set_page_config(page_title="منصة إيداع المذكرات", page_icon="📚", layout="centered")
 st.markdown("""
     <style>
@@ -95,5 +104,6 @@ if note_number and password:
 
             st.success("✅ تم رفع الملف بنجاح!")
             st.info(f"📎 معرف الملف على Drive: `{file_id}`")
+
     else:
         st.error("❌ رقم المذكرة أو كلمة السر غير صحيحة. يرجى التحقق والمحاولة مجددًا.")
