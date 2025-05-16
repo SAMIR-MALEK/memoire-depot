@@ -52,14 +52,14 @@ def upload_to_drive(file_path, file_name, service):
 st.markdown("""
     <style>
     .main {
-        background-color: #121212;
+        background-color: #1E2A38;
         color: #e0e0e0;
     }
     .block-container {
         padding: 2rem;
-        background-color: #1e1e2f;
+        background-color: #243447;
         border-radius: 12px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.8);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.5);
         max-width: 700px;
         margin: auto;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -68,7 +68,7 @@ st.markdown("""
         font-size: 16px !important;
     }
     button {
-        background-color: #0d3b66 !important;
+        background-color: #256D85 !important;
         color: white !important;
         border: none !important;
         padding: 10px 20px !important;
@@ -76,7 +76,7 @@ st.markdown("""
         transition: background-color 0.3s ease;
     }
     button:hover {
-        background-color: #145da0 !important;
+        background-color: #2C89A0 !important;
     }
     </style>
 """, unsafe_allow_html=True)
