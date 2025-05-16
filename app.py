@@ -114,6 +114,12 @@ st.markdown("يرجى إدخال **رقم المذكرة** و **كلمة الس�
 note_number = st.text_input('رقم المذكرة', placeholder='أدخل رقم المذكرة هنا')
 password = st.text_input('كلمة السر', type='password', placeholder='أدخل كلمة السر')
 
+# تهيئة المتغيرات في جلسة التخزين
+if 'upload_success' not in st.session_state:
+    st.session_state.upload_success = False
+if 'file_id' not in st.session_state:
+    st.session_state.file_id = None
+
 if st.button("✅ تأكيد"):
     if note_number and password:
         df = load_data()
@@ -143,8 +149,7 @@ if st.button("✅ تأكيد"):
 
             uploaded_file = st.file_uploader('اختر ملف PDF للمذكرة:', type=['pdf'])
 
-            if uploaded_file is not None:
-                # قم بكتابة الملف مؤقتًا
+            if uploaded_file is not None and not st.session_state.upload_success:
                 temp_file_path = "temp.pdf"
                 with open(temp_file_path, "wb") as f:
                     f.write(uploaded_file.read())
@@ -153,16 +158,23 @@ if st.button("✅ تأكيد"):
                     with st.spinner("🚀 جاري رفع الملف إلى Google Drive..."):
                         service = get_drive_service()
                         file_id = upload_to_drive(temp_file_path, f"Memoire_{note_number}.pdf", service)
-                    st.success("✅ تم إيداع المذكرة بنجاح!")
-                    st.info(f'📎 معرف الملف على Drive: `{file_id}`')
+                    st.session_state.upload_success = True
+                    st.session_state.file_id = file_id
                 except Exception as e:
                     st.error(f"❌ حدث خطأ أثناء رفع الملف: {e}")
                 finally:
                     if os.path.exists(temp_file_path):
                         os.remove(temp_file_path)
 
+            if st.session_state.upload_success:
+                st.success("✅ تم إيداع المذكرة بنجاح!")
+                st.info(f'📎 معرف الملف على Drive: `{st.session_state.file_id}`')
+                if st.button("رفع مذكرة أخرى"):
+                    st.session_state.upload_success = False
+                    st.session_state.file_id = None
+                    st.experimental_rerun()
+
         else:
             st.error("❌ رقم المذكرة أو كلمة السر غير صحيحة. يرجى التحقق والمحاولة مجددًا.")
     else:
         st.warning("⚠️ يرجى تعبئة رقم المذكرة وكلمة السر.")
-
