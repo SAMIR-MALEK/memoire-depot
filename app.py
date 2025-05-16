@@ -1,0 +1,99 @@
+import streamlit as st
+import pandas as pd
+import os
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaFileUpload
+from PIL import Image
+
+# إعدادات Google Drive
+FOLDER_ID = '1TfhvUA9oqvSlj9TuLjkyHi5xsC5svY1D'
+SCOPES = ['https://www.googleapis.com/auth/drive.file']
+
+# تحميل بيانات المذكرات
+@st.cache_data
+def load_data():
+    df = pd.read_excel("حالة تسجيل المذكرات.xlsx")
+    df = df.astype(str)
+    return df
+
+# المصادقة مع Google Drive
+@st.cache_resource
+def get_drive_service():
+    flow = InstalledAppFlow.from_client_secrets_file(
+        'client_secret_657345545277-71v49s3jk4hme26i7knjlj9hlkutgpdm.apps.googleusercontent.com.json', SCOPES)
+    creds = flow.run_local_server(port=0)
+    service = build('drive', 'v3', credentials=creds)
+    return service
+
+# رفع الملف إلى Google Drive
+def upload_to_drive(file_path, file_name, service):
+    file_metadata = {
+        'name': file_name,
+        'parents': [FOLDER_ID]
+    }
+    media = MediaFileUpload(file_path, mimetype='application/pdf')
+    uploaded = service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+    return uploaded.get('id')
+
+# ========================== واجهة التطبيق ===========================
+st.set_page_config(page_title="منصة إيداع المذكرات", page_icon="📚", layout="centered")
+st.markdown("""
+    <style>
+    .main {
+        background-color: #f8f9fa;
+    }
+    .block-container {
+        padding-top: 2rem;
+        padding-bottom: 2rem;
+        background-color: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    </style>
+""", unsafe_allow_html=True)
+
+st.title("📚 منصة إيداع مذكرات التخرج")
+st.markdown("""
+    <p style='font-size:18px;'>يرجى إدخال <strong>رقم المذكرة</strong> و <strong>كلمة السر</strong> لمتابعة عملية الإيداع.</p>
+""", unsafe_allow_html=True)
+
+note_number = st.text_input("🔢 رقم المذكرة")
+password = st.text_input("🔐 كلمة السر", type="password")
+
+if note_number and password:
+    df = load_data()
+    match = df[(df['رقم المذكرة'] == note_number) & (df['كلمة السر'] == password)]
+
+    if not match.empty:
+        memo_info = match.iloc[0]
+        st.success("✅ تم التحقق من المعلومات بنجاح")
+
+        st.markdown(f"""
+            <h4 style='color:#2c3e50;'>📄 عنوان المذكرة:</h4>
+            <p style='font-size:16px;'>{memo_info['عنوان المذكرة']}</p>
+            <h4 style='color:#2c3e50;'>👨‍🎓 الطلبة:</h4>
+            <ul style='font-size:16px;'>
+                <li>{memo_info['الطالب 1']}</li>
+                {f"<li>{memo_info['الطالب 2']}</li>" if 'الطالب 2' in memo_info and pd.notna(memo_info['الطالب 2']) else ""}
+            </ul>
+        """, unsafe_allow_html=True)
+
+        st.markdown("---")
+        st.subheader("📤 رفع ملف المذكرة")
+        uploaded_file = st.file_uploader("اختر ملف PDF للمذكرة:", type=['pdf'])
+
+        if uploaded_file:
+            with open("temp.pdf", "wb") as f:
+                f.write(uploaded_file.read())
+
+            with st.spinner("🚀 جاري رفع الملف إلى Google Drive..."):
+                service = get_drive_service()
+                file_id = upload_to_drive("temp.pdf", f"Memoire_{note_number}.pdf", service)
+                os.remove("temp.pdf")
+
+            st.success("✅ تم رفع الملف بنجاح!")
+            st.info(f"📎 معرف الملف على Drive: `{file_id}`")
+    else:
+        st.error("❌ رقم المذكرة أو كلمة السر غير صحيحة. يرجى التحقق والمحاولة مجددًا.")
