@@ -35,7 +35,8 @@ def get_drive_service():
         },
         SCOPES,
     )
-    creds = flow.run_local_server(port=0)
+    creds = flow.run_console()
+
     service = build('drive', 'v3', credentials=creds)
     return service
 
