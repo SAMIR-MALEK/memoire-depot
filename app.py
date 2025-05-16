@@ -1,21 +1,15 @@
 import streamlit as st
-st.set_page_config(page_title="منصة إيداع المذكرات", page_icon="📚", layout="centered")
-
 import pandas as pd
 import os
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
+from streamlit_fontawesome import st_fa  # استيراد مكتبة الأيقونات
 
 FOLDER_ID = '1TfhvUA9oqvSlj9TuLjkyHi5xsC5svY1D'
 SCOPES = ['https://www.googleapis.com/auth/drive.file']
 
-# تضمين Font Awesome
-st.markdown("""
-    <head>
-        <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    </head>
-""", unsafe_allow_html=True)
+st.set_page_config(page_title="منصة إيداع المذكرات", page_icon="📚", layout="centered")
 
 @st.cache_data
 def load_data():
@@ -59,62 +53,59 @@ def upload_to_drive(file_path, file_name, service):
 st.markdown("""
     <style>
     .main {
-        background-color: #f8f9fa;
+        background-color: #121212;
+        color: #e0e0e0;
     }
     .block-container {
         padding: 2rem;
-        background-color: white;
+        background-color: #1e1e2f;
         border-radius: 12px;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.8);
         max-width: 700px;
         margin: auto;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
-    h2, h4 {
-        color: #2c3e50;
-    }
-    ul {
-        font-size: 16px;
-        padding-left: 20px;
+    input, button {
+        font-size: 16px !important;
     }
     button {
-        background-color: #4CAF50 !important;
+        background-color: #0d3b66 !important;  /* أزرق ليلي */
         color: white !important;
         border: none !important;
         padding: 10px 20px !important;
         border-radius: 6px !important;
-        font-size: 16px !important;
+        transition: background-color 0.3s ease;
+    }
+    button:hover {
+        background-color: #145da0 !important; /* أزرق أفتح عند المرور */
     }
     </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<h2><i class="fas fa-book"></i> منصة إيداع مذكرات التخرج</h2>', unsafe_allow_html=True)
-st.markdown("""
-    <p style='font-size:18px;'>يرجى إدخال <strong>رقم المذكرة</strong> و <strong>كلمة السر</strong> ثم الضغط على زر التحقق.</p>
-""", unsafe_allow_html=True)
+st.markdown(f"# {st_fa('book')} منصة إيداع مذكرات التخرج")
+st.markdown("يرجى إدخال **رقم المذكرة** و **كلمة السر** ثم الضغط على زر التحقق.")
 
 note_number = st.text_input('رقم المذكرة', placeholder='أدخل رقم المذكرة هنا')
 password = st.text_input('كلمة السر', type='password', placeholder='أدخل كلمة السر')
 
-if st.button('<i class="fas fa-check-circle"></i> تأكيد', key='confirm'):
+if st.button(f'{st_fa("check-circle")} تأكيد', key='confirm'):
     if note_number and password:
         df = load_data()
         match = df[(df['رقم المذكرة'] == note_number) & (df['كلمة السر'] == password)]
 
         if not match.empty:
             memo_info = match.iloc[0]
-            st.success('<i class="fas fa-check-circle"></i> تم التحقق من المعلومات بنجاح', icon="✅")
+            st.success(f'{st_fa("check-circle")} تم التحقق من المعلومات بنجاح')
             st.markdown(f"""
-                <h4><i class="fas fa-file-alt"></i> عنوان المذكرة:</h4>
-                <p>{memo_info['عنوان المذكرة']}</p>
-                <h4><i class="fas fa-user-graduate"></i> الطلبة:</h4>
-                <ul>
-                    <li>{memo_info['الطالب 1']}</li>
-                    {f"<li>{memo_info['الطالب 2']}</li>" if 'الطالب 2' in memo_info and pd.notna(memo_info['الطالب 2']) else ""}
-                </ul>
-            """, unsafe_allow_html=True)
+                ### {st_fa("file-alt")} عنوان المذكرة:
+                {memo_info['عنوان المذكرة']}
+                ### {st_fa("user-graduate")} الطلبة:
+                - {memo_info['الطالب 1']}
+                {f"- {memo_info['الطالب 2']}" if 'الطالب 2' in memo_info and pd.notna(memo_info['الطالب 2']) else ""}
+            """)
 
             st.markdown("---")
-            st.subheader('<i class="fas fa-upload"></i> رفع ملف المذكرة')
+            st.subheader(f'{st_fa("upload")} رفع ملف المذكرة')
             uploaded_file = st.file_uploader('اختر ملف PDF للمذكرة:', type=['pdf'])
 
             if uploaded_file:
@@ -126,10 +117,10 @@ if st.button('<i class="fas fa-check-circle"></i> تأكيد', key='confirm'):
                     file_id = upload_to_drive("temp.pdf", f"Memoire_{note_number}.pdf", service)
                     os.remove("temp.pdf")
 
-                st.success('<i class="fas fa-check-circle"></i> تم رفع الملف بنجاح!')
+                st.success(f'{st_fa("check-circle")} تم رفع الملف بنجاح!')
                 st.info(f'📎 معرف الملف على Drive: `{file_id}`')
 
         else:
-            st.error('<i class="fas fa-exclamation-triangle"></i> رقم المذكرة أو كلمة السر غير صحيحة. يرجى التحقق والمحاولة مجددًا.')
+            st.error(f'{st_fa("exclamation-triangle")} رقم المذكرة أو كلمة السر غير صحيحة. يرجى التحقق والمحاولة مجددًا.')
     else:
-        st.warning('<i class="fas fa-exclamation-circle"></i> يرجى تعبئة رقم المذكرة وكلمة السر.')
+        st.warning(f'{st_fa("exclamation-circle")} يرجى تعبئة رقم المذكرة وكلمة السر.')
