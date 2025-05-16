@@ -101,10 +101,11 @@ st.markdown("""
 
 st.markdown("""
     <div class="header-container">
-        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Logo_Université_Bordj_Bou_Arreridj.png/120px-Logo_Université_Bordj_Bou_Arreridj.png" class="header-logo">
+        <img src="https://drive.google.com/file/d/1sBEUeqEF6tKTglXP3ePMtV4BN_929R9Y/view?usp=drive_link" class="header-logo">
         <h2>📚 منصة إيداع مذكرات التخرج</h2>
-        <h4>كلية الحقوق والعلوم السياسية</h4>
-        <h5>جامعة برج بوعريريج</h5>
+        <h4>جامعة برج بوعريريج</h4>
+        <h5>كلية الحقوق والعلوم السياسية</h5>
+        
     </div>
 """, unsafe_allow_html=True)
 
