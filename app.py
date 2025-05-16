@@ -58,7 +58,7 @@ st.markdown("""
     .block-container {
         padding: 2rem;
         background-color: #243447;
-        border-radius: 12px;
+        border-radius: 9px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.5);
         max-width: 700px;
         margin: auto;
