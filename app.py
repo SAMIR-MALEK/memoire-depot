@@ -114,7 +114,6 @@ st.markdown("يرجى إدخال **رقم المذكرة** و **كلمة الس�
 note_number = st.text_input('رقم المذكرة', placeholder='أدخل رقم المذكرة هنا')
 password = st.text_input('كلمة السر', type='password', placeholder='أدخل كلمة السر')
 
-# تهيئة المتغيرات في جلسة التخزين
 if 'upload_success' not in st.session_state:
     st.session_state.upload_success = False
 if 'file_id' not in st.session_state:
@@ -131,7 +130,14 @@ if st.button("✅ تأكيد"):
             st.error("⚠️ بعض الأعمدة مفقودة في ملف Excel: " + ", ".join(missing_columns))
             st.stop()
 
-        match = df[(df['رقم المذكرة'] == note_number) & (df['كلمة السر'] == password)]
+        # تنظيف القيم
+        df['رقم المذكرة'] = df['رقم المذكرة'].str.strip()
+        df['كلمة السر'] = df['كلمة السر'].str.strip()
+
+        input_note = note_number.strip()
+        input_pass = password.strip()
+
+        match = df[(df['رقم المذكرة'].str.lower() == input_note.lower()) & (df['كلمة السر'].str.lower() == input_pass.lower())]
 
         if not match.empty:
             memo_info = match.iloc[0]
@@ -157,7 +163,7 @@ if st.button("✅ تأكيد"):
                 try:
                     with st.spinner("🚀 جاري رفع الملف إلى Google Drive..."):
                         service = get_drive_service()
-                        file_id = upload_to_drive(temp_file_path, f"Memoire_{note_number}.pdf", service)
+                        file_id = upload_to_drive(temp_file_path, f"Memoire_{input_note}.pdf", service)
                     st.session_state.upload_success = True
                     st.session_state.file_id = file_id
                 except Exception as e:
