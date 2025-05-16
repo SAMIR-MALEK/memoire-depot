@@ -53,7 +53,7 @@ st.markdown("""
     <style>
     .main {
         background-color: #1E2A38;
-        color: #e0e0e0;
+        color: #ffffff;
     }
     .block-container {
         padding: 2rem;
@@ -63,6 +63,10 @@ st.markdown("""
         max-width: 700px;
         margin: auto;
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: #ffffff;
+    }
+    label, h1, h2, h3, h4, h5, h6, p, span, .stTextInput label {
+        color: #ffffff !important;
     }
     input, button {
         font-size: 16px !important;
@@ -81,7 +85,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.markdown("# 📚 منصة إيداع مذكرات التخرج")
+st.markdown("# 📚 منصة إيداع مذكرات التخرج ماستر2 - كل التخصصات")
 st.markdown("يرجى إدخال **رقم المذكرة** و **كلمة السر** ثم الضغط على زر التحقق.")
 
 note_number = st.text_input('رقم المذكرة', placeholder='أدخل رقم المذكرة هنا')
