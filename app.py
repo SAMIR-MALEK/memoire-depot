@@ -58,7 +58,7 @@ st.markdown("""
     .block-container {
         padding: 2rem;
         background-color: #243447;
-        border-radius: 9px;
+        border-radius: 12px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.5);
         max-width: 700px;
         margin: auto;
@@ -69,7 +69,7 @@ st.markdown("""
         color: #ffffff !important;
     }
     input, button {
-        font-size: 16px !important;
+        font-size: 12px !important;
     }
     button {
         background-color: #256D85 !important;
