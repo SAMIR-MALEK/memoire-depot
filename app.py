@@ -140,21 +140,29 @@ if st.button("✅ تأكيد"):
 
             st.markdown("---")
             st.subheader("📤 رفع ملف المذكرة")
+
             uploaded_file = st.file_uploader('اختر ملف PDF للمذكرة:', type=['pdf'])
 
-            if uploaded_file:
-                with open("temp.pdf", "wb") as f:
+            if uploaded_file is not None:
+                # قم بكتابة الملف مؤقتًا
+                temp_file_path = "temp.pdf"
+                with open(temp_file_path, "wb") as f:
                     f.write(uploaded_file.read())
 
-                with st.spinner("🚀 جاري رفع الملف إلى Google Drive..."):
-                    service = get_drive_service()
-                    file_id = upload_to_drive("temp.pdf", f"Memoire_{note_number}.pdf", service)
-                    os.remove("temp.pdf")
-
-                st.success("✅ تم رفع الملف بنجاح!")
-                st.info(f'📎 معرف الملف على Drive: `{file_id}`')
+                try:
+                    with st.spinner("🚀 جاري رفع الملف إلى Google Drive..."):
+                        service = get_drive_service()
+                        file_id = upload_to_drive(temp_file_path, f"Memoire_{note_number}.pdf", service)
+                    st.success("✅ تم إيداع المذكرة بنجاح!")
+                    st.info(f'📎 معرف الملف على Drive: `{file_id}`')
+                except Exception as e:
+                    st.error(f"❌ حدث خطأ أثناء رفع الملف: {e}")
+                finally:
+                    if os.path.exists(temp_file_path):
+                        os.remove(temp_file_path)
 
         else:
             st.error("❌ رقم المذكرة أو كلمة السر غير صحيحة. يرجى التحقق والمحاولة مجددًا.")
     else:
         st.warning("⚠️ يرجى تعبئة رقم المذكرة وكلمة السر.")
+
