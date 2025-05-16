@@ -118,7 +118,7 @@ if st.button("✅ تأكيد"):
     if note_number and password:
         df = load_data()
 
-        required_columns = ['رقم المذكرة', 'كلمة السر', 'عنوان المذكرة', 'الطالب 1', 'الطالب 2']
+        required_columns = ['رقم المذكرة', 'كلمة السر', 'عنوان المذكرة', 'الطالب الأول', 'الطالب الثاني']
         missing_columns = [col for col in required_columns if col not in df.columns]
 
         if missing_columns:
@@ -134,8 +134,8 @@ if st.button("✅ تأكيد"):
                 ### 📄 عنوان المذكرة:
                 {memo_info.get('عنوان المذكرة', 'غير متوفر')}
                 ### 🎓 الطلبة:
-                - {memo_info.get('الطالب 1', '---')}
-                {f"- {memo_info.get('الطالب 2')}" if pd.notna(memo_info.get('الطالب 2')) else ""}
+                - {memo_info.get('الطالب الأول', '---')}
+                {f"- {memo_info.get('الطالب الثاني')}" if pd.notna(memo_info.get('الطالب الثاني')) else ""}
             """)
 
             st.markdown("---")
