@@ -1,15 +1,14 @@
 import streamlit as st
+st.set_page_config(page_title="منصة إيداع المذكرات", page_icon="📚", layout="centered")
+
 import pandas as pd
 import os
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
-from streamlit_fontawesome import st_fa  # استيراد مكتبة الأيقونات
 
 FOLDER_ID = '1TfhvUA9oqvSlj9TuLjkyHi5xsC5svY1D'
 SCOPES = ['https://www.googleapis.com/auth/drive.file']
-
-st.set_page_config(page_title="منصة إيداع المذكرات", page_icon="📚", layout="centered")
 
 @st.cache_data
 def load_data():
@@ -69,7 +68,7 @@ st.markdown("""
         font-size: 16px !important;
     }
     button {
-        background-color: #0d3b66 !important;  /* أزرق ليلي */
+        background-color: #0d3b66 !important;
         color: white !important;
         border: none !important;
         padding: 10px 20px !important;
@@ -77,35 +76,35 @@ st.markdown("""
         transition: background-color 0.3s ease;
     }
     button:hover {
-        background-color: #145da0 !important; /* أزرق أفتح عند المرور */
+        background-color: #145da0 !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
-st.markdown(f"# {st_fa('book')} منصة إيداع مذكرات التخرج")
+st.markdown("# 📚 منصة إيداع مذكرات التخرج")
 st.markdown("يرجى إدخال **رقم المذكرة** و **كلمة السر** ثم الضغط على زر التحقق.")
 
 note_number = st.text_input('رقم المذكرة', placeholder='أدخل رقم المذكرة هنا')
 password = st.text_input('كلمة السر', type='password', placeholder='أدخل كلمة السر')
 
-if st.button(f'{st_fa("check-circle")} تأكيد', key='confirm'):
+if st.button("✅ تأكيد"):
     if note_number and password:
         df = load_data()
         match = df[(df['رقم المذكرة'] == note_number) & (df['كلمة السر'] == password)]
 
         if not match.empty:
             memo_info = match.iloc[0]
-            st.success(f'{st_fa("check-circle")} تم التحقق من المعلومات بنجاح')
+            st.success("✅ تم التحقق من المعلومات بنجاح")
             st.markdown(f"""
-                ### {st_fa("file-alt")} عنوان المذكرة:
+                ### 📄 عنوان المذكرة:
                 {memo_info['عنوان المذكرة']}
-                ### {st_fa("user-graduate")} الطلبة:
+                ### 🎓 الطلبة:
                 - {memo_info['الطالب 1']}
                 {f"- {memo_info['الطالب 2']}" if 'الطالب 2' in memo_info and pd.notna(memo_info['الطالب 2']) else ""}
             """)
 
             st.markdown("---")
-            st.subheader(f'{st_fa("upload")} رفع ملف المذكرة')
+            st.subheader("📤 رفع ملف المذكرة")
             uploaded_file = st.file_uploader('اختر ملف PDF للمذكرة:', type=['pdf'])
 
             if uploaded_file:
@@ -117,10 +116,10 @@ if st.button(f'{st_fa("check-circle")} تأكيد', key='confirm'):
                     file_id = upload_to_drive("temp.pdf", f"Memoire_{note_number}.pdf", service)
                     os.remove("temp.pdf")
 
-                st.success(f'{st_fa("check-circle")} تم رفع الملف بنجاح!')
+                st.success("✅ تم رفع الملف بنجاح!")
                 st.info(f'📎 معرف الملف على Drive: `{file_id}`')
 
         else:
-            st.error(f'{st_fa("exclamation-triangle")} رقم المذكرة أو كلمة السر غير صحيحة. يرجى التحقق والمحاولة مجددًا.')
+            st.error("⚠️ رقم المذكرة أو كلمة السر غير صحيحة. يرجى التحقق والمحاولة مجددًا.")
     else:
-        st.warning(f'{st_fa("exclamation-circle")} يرجى تعبئة رقم المذكرة وكلمة السر.')
+        st.warning("⚠️ يرجى تعبئة رقم المذكرة وكلمة السر.")
