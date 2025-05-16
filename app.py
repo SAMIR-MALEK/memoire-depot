@@ -51,6 +51,12 @@ def upload_to_drive(file_path, file_name, service):
 
 st.markdown("""
     <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
+
+    html, body, [class*="css"]  {
+        font-family: 'Cairo', sans-serif !important;
+    }
+
     .main {
         background-color: #1E2A38;
         color: #ffffff;
@@ -62,14 +68,14 @@ st.markdown("""
         box-shadow: 0 4px 12px rgba(0,0,0,0.5);
         max-width: 700px;
         margin: auto;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        font-family: 'Cairo', sans-serif !important;
         color: #ffffff;
     }
     label, h1, h2, h3, h4, h5, h6, p, span, .stTextInput label {
         color: #ffffff !important;
     }
     input, button {
-        font-size: 12px !important;
+        font-size: 16px !important;
     }
     button {
         background-color: #256D85 !important;
@@ -82,10 +88,26 @@ st.markdown("""
     button:hover {
         background-color: #2C89A0 !important;
     }
+    .header-container {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+    .header-logo {
+        width: 70px;
+        margin-bottom: 10px;
+    }
     </style>
 """, unsafe_allow_html=True)
 
-st.markdown("# 📚 منصة إيداع مذكرات التخرج ماستر2 - كل التخصصات")
+st.markdown("""
+    <div class="header-container">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Logo_Université_Bordj_Bou_Arreridj.png/120px-Logo_Université_Bordj_Bou_Arreridj.png" class="header-logo">
+        <h2>📚 منصة إيداع مذكرات التخرج</h2>
+        <h4>كلية الحقوق والعلوم السياسية</h4>
+        <h5>جامعة برج بوعريريج</h5>
+    </div>
+""", unsafe_allow_html=True)
+
 st.markdown("يرجى إدخال **رقم المذكرة** و **كلمة السر** ثم الضغط على زر التحقق.")
 
 note_number = st.text_input('رقم المذكرة', placeholder='أدخل رقم المذكرة هنا')
