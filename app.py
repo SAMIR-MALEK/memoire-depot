@@ -18,5 +18,7 @@ st.markdown(""" <style> @import url('https://fonts.googleapis.com/css2?family=Ca
 
 st.markdown(""" <div class="header-container"> <img src="https://drive.google.com/uc?id=1sBEUeqEF6tKTglXP3ePMtV4BN_929R9Y" class="header-logo"> <h2>📚 منصة إيداع مذكرات التخرج</h2> <h4>كلية الحقوق والعلوم السياسية</h4> <h5>جامعة برج بوعريريج</h5> </div> """, unsafe_allow_html=True)
 
+====== إظهار مثال من ملف إكسل ======
+
 if st.checkbox("عرض مثال من ملف Excel"): df_test = load_data() df_test.columns = df_test.columns.str.strip() sample = df_test[['رقم المذكرة', 'كلمة السر', 'عنوان المذكرة']].head(1).to_dict(orient='records')[0] st.info(f""" ### بيانات اختبارية: - رقم المذكرة: {sample['رقم المذكرة']} - كلمة السر: {sample['كلمة السر']} - العنوان: {sample['عنوان المذكرة']} """)
 
