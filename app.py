@@ -3,7 +3,7 @@ st.set_page_config(page_title="منصة إيداع المذكرات", page_icon=
 
 import pandas as pd
 import os
-from google_auth_oauthlib.flow import InstalledAppFlow
+from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 
@@ -19,25 +19,22 @@ def load_data():
 
 @st.cache_resource
 def get_drive_service():
-    client_id = st.secrets["google_oauth"]["client_id"]
-    client_secret = st.secrets["google_oauth"]["client_secret"]
-    redirect_uri = st.secrets["google_oauth"]["redirect_uri"]
+    # جلب بيانات حساب الخدمة من secrets
+    info = {
+        "type": st.secrets["service_account"]["type"],
+        "project_id": st.secrets["service_account"]["project_id"],
+        "private_key_id": st.secrets["service_account"]["private_key_id"],
+        "private_key": st.secrets["service_account"]["private_key"].replace("\\n", "\n"),
+        "client_email": st.secrets["service_account"]["client_email"],
+        "client_id": st.secrets["service_account"]["client_id"],
+        "auth_uri": st.secrets["service_account"]["auth_uri"],
+        "token_uri": st.secrets["service_account"]["token_uri"],
+        "auth_provider_x509_cert_url": st.secrets["service_account"]["auth_provider_x509_cert_url"],
+        "client_x509_cert_url": st.secrets["service_account"]["client_x509_cert_url"],
+    }
 
-    flow = InstalledAppFlow.from_client_config(
-        {
-            "installed": {
-                "client_id": client_id,
-                "client_secret": client_secret,
-                "redirect_uris": [redirect_uri],
-                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                "token_uri": "https://oauth2.googleapis.com/token"
-            }
-        },
-        SCOPES,
-    )
-    creds = flow.run_console()
-
-    service = build('drive', 'v3', credentials=creds)
+    credentials = service_account.Credentials.from_service_account_info(info, scopes=SCOPES)
+    service = build('drive', 'v3', credentials=credentials)
     return service
 
 def upload_to_drive(file_path, file_name, service):
@@ -168,6 +165,5 @@ if st.session_state.upload_success:
         for key in ["step", "validated", "upload_success", "file_id", "memo_info"]:
             st.session_state[key] = None if key == "memo_info" else False if key in ["validated", "upload_success"] else "login"
         st.experimental_rerun()
-
 else:
     st.stop()
