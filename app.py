@@ -51,7 +51,7 @@ def upload_to_drive(file_path, file_name, service):
 # إعداد الحالة للجلسة
 for key in ["step", "validated", "upload_success", "file_id", "memo_info"]:
     if key not in st.session_state:
-        st.session_state[key] = None if key == "memo_info" else False if key == "validated" else "login"
+        st.session_state[key] = None if key == "memo_info" else False if key in ["validated", "upload_success"] else "login"
 
 # ========================== الواجهة ===========================
 st.markdown("""
@@ -130,7 +130,7 @@ if st.session_state.step == "login":
             st.error("❌ رقم المذكرة أو كلمة السر غير صحيحة. يرجى التحقق والمحاولة مجددًا.")
 
 # ======================== الخطوة الثانية =========================
-elif st.session_state.step == "upload":
+elif st.session_state.step == "upload" and not st.session_state.upload_success:
     memo_info = st.session_state.memo_info
     st.success("✅ تم التحقق من المعلومات بنجاح")
     st.markdown(f"""
@@ -145,7 +145,7 @@ elif st.session_state.step == "upload":
     st.subheader("📤 رفع ملف المذكرة (PDF فقط)")
     uploaded_file = st.file_uploader("اختر الملف:", type="pdf")
 
-    if uploaded_file and not st.session_state.upload_success:
+    if uploaded_file:
         with open("temp.pdf", "wb") as f:
             f.write(uploaded_file.read())
         try:
@@ -159,13 +159,14 @@ elif st.session_state.step == "upload":
         finally:
             os.remove("temp.pdf")
 
-    if st.session_state.upload_success:
-        st.success("✅ تم إيداع المذكرة بنجاح!")
-        st.info(f"📎 معرف الملف على Drive: `{st.session_state.file_id}`")
-        if st.button("⬅️ رفع مذكرة أخرى"):
-            for key in ["step", "validated", "upload_success", "file_id", "memo_info"]:
-                st.session_state[key] = None if key == "memo_info" else False if key == "validated" else "login"
-            st.experimental_rerun()
+# ======================== رسالة النجاح بعد الرفع =========================
+if st.session_state.upload_success:
+    st.success("✅ تم إيداع المذكرة بنجاح!")
+    st.info(f"📎 معرف الملف على Drive: `{st.session_state.file_id}`")
+    if st.button("⬅️ إنهاء"):
+        for key in ["step", "validated", "upload_success", "file_id", "memo_info"]:
+            st.session_state[key] = None if key == "memo_info" else False if key in ["validated", "upload_success"] else "login"
+        st.experimental_rerun()
 
 else:
     st.stop()
