@@ -104,18 +104,6 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# ====== إظهار مثال من ملف إكسل ======
-if st.checkbox("عرض مثال من ملف Excel"):
-    df_test = load_data()
-    df_test.columns = df_test.columns.str.strip()
-    sample = df_test[['رقم المذكرة', 'كلمة السر', 'عنوان المذكرة']].head(1).to_dict(orient='records')[0]
-    st.info(f"""
-    ### بيانات اختبارية:
-    - **رقم المذكرة:** `{sample['رقم المذكرة']}`
-    - **كلمة السر:** `{sample['كلمة السر']}`
-    - **العنوان:** {sample['عنوان المذكرة']}
-    """)
-
 # ======================== الخطوة الأولى =========================
 if st.session_state.step == "login":
     note_number = st.text_input('رقم المذكرة', key="note_input")
