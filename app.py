@@ -141,18 +141,19 @@ elif st.session_state.step == "upload" and not st.session_state.upload_success:
     uploaded_file = st.file_uploader("اختر الملف:", type="pdf")
 
     if uploaded_file:
-        with open("temp.pdf", "wb") as f:
+        temp_path = uploaded_file.name
+        with open(temp_path, "wb") as f:
             f.write(uploaded_file.read())
         try:
             with st.spinner("🚀 جاري رفع الملف إلى Google Drive..."):
                 service = get_drive_service()
-                file_id = upload_to_drive("temp.pdf", f"Memoire_{memo_info['رقم المذكرة']}.pdf", service)
+                file_id = upload_to_drive(temp_path, f"Memoire_{memo_info['رقم المذكرة']}.pdf", service)
             st.session_state.upload_success = True
             st.session_state.file_id = file_id
         except Exception as e:
             st.error(f"❌ حدث خطأ أثناء رفع الملف: {e}")
         finally:
-            os.remove("temp.pdf")
+            os.remove(temp_path)
 
 # ======================== رسالة النجاح بعد الرفع =========================
 if st.session_state.upload_success:
