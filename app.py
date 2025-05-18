@@ -1,14 +1,18 @@
 import streamlit as st
 import pandas as pd
-import os
 import tempfile
+import os
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 
+# إعدادات صفحة Streamlit
+st.set_page_config(page_title="منصة إيداع المذكرات", page_icon="📚", layout="centered")
+
 FOLDER_ID = '1TfhvUA9oqvSlj9TuLjkyHi5xsC5svY1D'
 SCOPES = ['https://www.googleapis.com/auth/drive.file']
 
+# تحميل بيانات تسجيل المذكرات من ملف Excel
 @st.cache_data
 def load_data():
     df = pd.read_excel("حالة تسجيل المذكرات.xlsx")
@@ -16,6 +20,7 @@ def load_data():
     df = df.astype(str)
     return df
 
+# إنشاء خدمة Google Drive مع بيانات الدخول من secrets
 @st.cache_resource
 def get_drive_service():
     info = {
@@ -34,6 +39,7 @@ def get_drive_service():
     service = build('drive', 'v3', credentials=credentials)
     return service
 
+# دالة لرفع الملف إلى Google Drive
 def upload_to_drive(file_path, file_name, service):
     file_metadata = {
         'name': file_name,
@@ -43,11 +49,15 @@ def upload_to_drive(file_path, file_name, service):
     uploaded = service.files().create(body=file_metadata, media_body=media, fields='id').execute()
     return uploaded.get('id')
 
-for key in ["step", "validated", "upload_success", "file_id", "memo_info"]:
+# تهيئة session_state
+for key in ["step", "upload_success", "file_id", "memo_info"]:
     if key not in st.session_state:
-        st.session_state[key] = None if key == "memo_info" else False if key in ["validated", "upload_success"] else "login"
+        if key == "step":
+            st.session_state[key] = "login"
+        else:
+            st.session_state[key] = None if key == "memo_info" else False
 
-# ========================== الواجهة ===========================
+# إضافة تنسيق CSS للصفحة (نسخ التنسيق اللي عندك)
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
@@ -94,6 +104,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# رأس الصفحة
 st.markdown("""
     <div class="header-container">
         <img src="https://drive.google.com/uc?id=1sBEUeqEF6tKTglXP3ePMtV4BN_929R9Y" class="header-logo">
@@ -103,28 +114,30 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# ======================== الخطوة الأولى =========================
+# === صفحة تسجيل الدخول ===
 if st.session_state.step == "login":
-    note_number = st.text_input('رقم المذكرة', key="note_input")
-    password = st.text_input('كلمة السر', type='password', key="pass_input")
+    with st.form("login_form"):
+        note_number = st.text_input('رقم المذكرة')
+        password = st.text_input('كلمة السر', type='password')
+        submitted = st.form_submit_button("✅ تأكيد")
 
-    if st.button("✅ تأكيد"):
-        df = load_data()
-        df['رقم المذكرة'] = df['رقم المذكرة'].str.strip()
-        df['كلمة السر'] = df['كلمة السر'].str.strip()
+        if submitted:
+            df = load_data()
+            df['رقم المذكرة'] = df['رقم المذكرة'].str.strip()
+            df['كلمة السر'] = df['كلمة السر'].str.strip()
 
-        note = note_number.strip().lower()
-        pw = password.strip().lower()
+            note = note_number.strip().lower()
+            pw = password.strip().lower()
 
-        match = df[(df['رقم المذكرة'].str.lower() == note) & (df['كلمة السر'].str.lower() == pw)]
-        if not match.empty:
-            st.session_state.memo_info = match.iloc[0]
-            st.session_state.step = "upload"
-            st.experimental_rerun()  # إعادة تحميل الصفحة فوراً بعد تغيير الحالة
-        else:
-            st.error("❌ رقم المذكرة أو كلمة السر غير صحيحة. يرجى التحقق والمحاولة مجددًا.")
+            match = df[(df['رقم المذكرة'].str.lower() == note) & (df['كلمة السر'].str.lower() == pw)]
+            if not match.empty:
+                st.session_state.memo_info = match.iloc[0]
+                st.session_state.step = "upload"
+                st.experimental_rerun()
+            else:
+                st.error("❌ رقم المذكرة أو كلمة السر غير صحيحة.")
 
-# ======================== الخطوة الثانية =========================
+# === صفحة رفع الملف ===
 elif st.session_state.step == "upload" and not st.session_state.upload_success:
     memo_info = st.session_state.memo_info
     st.success("✅ تم التحقق من المعلومات بنجاح")
@@ -135,15 +148,14 @@ elif st.session_state.step == "upload" and not st.session_state.upload_success:
         - {memo_info.get('الطالب الأول', '---')}
         {f"- {memo_info.get('الطالب الثاني')}" if pd.notna(memo_info.get('الطالب الثاني')) else ""}
     """)
-
     st.markdown("---")
     st.subheader("📤 رفع ملف المذكرة (PDF فقط)")
-    uploaded_file = st.file_uploader("اختر الملف:", type="pdf")
 
-    if uploaded_file:
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
-            tmp_file.write(uploaded_file.read())
-            temp_path = tmp_file.name
+    uploaded_file = st.file_uploader("اختر الملف:", type="pdf")
+    if uploaded_file is not None:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+            tmp.write(uploaded_file.read())
+            temp_path = tmp.name
 
         try:
             with st.spinner("🚀 جاري رفع الملف إلى Google Drive..."):
@@ -151,17 +163,21 @@ elif st.session_state.step == "upload" and not st.session_state.upload_success:
                 file_id = upload_to_drive(temp_path, f"Memoire_{memo_info['رقم المذكرة']}.pdf", service)
             st.session_state.upload_success = True
             st.session_state.file_id = file_id
+            st.experimental_rerun()
         except Exception as e:
             st.error(f"❌ حدث خطأ أثناء رفع الملف: {e}")
         finally:
             if os.path.exists(temp_path):
                 os.remove(temp_path)
 
-# ======================== رسالة النجاح بعد الرفع =========================
+# === صفحة نجاح الرفع ===
 if st.session_state.upload_success:
     st.success("✅ تم إيداع المذكرة بنجاح!")
     st.info(f"📎 معرف الملف على Drive: `{st.session_state.file_id}`")
     if st.button("⬅️ إنهاء"):
-        for key in ["step", "validated", "upload_success", "file_id", "memo_info"]:
-            st.session_state[key] = None if key == "memo_info" else False if key in ["validated", "upload_success"] else "login"
+        for key in ["step", "upload_success", "file_id", "memo_info"]:
+            if key == "step":
+                st.session_state[key] = "login"
+            else:
+                st.session_state[key] = None if key == "memo_info" else False
         st.experimental_rerun()
