@@ -5,7 +5,6 @@ import tempfile
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
-st.write("📧 الحساب الخدمي:", st.secrets["service_account"]["client_email"])
 
 # إعداد الصفحة
 st.set_page_config(page_title="منصة إيداع المذكرات", page_icon="📚", layout="centered")
