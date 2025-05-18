@@ -115,7 +115,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # === الخطوة 1: التحقق من البيانات ===
-st.write("Session State at Start:")
+
 st.write(st.session_state)  # إضافة تسجيل حالة الجلسة
 
 if st.session_state.step == "login":
