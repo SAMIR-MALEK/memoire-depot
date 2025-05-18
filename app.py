@@ -13,12 +13,15 @@ FOLDER_ID = '1TfhvUA9oqvSlj9TuLjkyHi5xsC5svY1D'
 SCOPES = ['https://www.googleapis.com/auth/drive.file ']
 
 # ==================== تحميل البيانات ====================
-@st.cache_data(ttl=3600)  # تحديث البيانات كل ساعة
+@st.cache_data(ttl=3600)  # تحديث كل ساعة
 def load_data():
-    df = pd.read_excel("حالة تسجيل المذكرات.xlsx")
-    df.columns = df.columns.str.strip()
-    df = df.astype(str)
-    return df
+    try:
+        df = pd.read_excel("حالة تسجيل المذكرات.xlsx")
+        df.columns = df.columns.str.strip()
+        return df.astype(str)
+    except Exception as e:
+        st.error(f"❌ لم يتم العثور على ملف البيانات أو حدث خطأ: {e}")
+        st.stop()
 
 # ==================== الاتصال بـ Google Drive API ====================
 @st.cache_resource
@@ -46,12 +49,16 @@ def upload_to_drive(file_path, file_name, service):
 
 # ==================== إعادة تهيئة الجلسة ====================
 def reset_session():
-    for key in ["step", "validated", "upload_success", "file_id", "memo_info"]:
-        del st.session_state[key]
+    for key in ["step", "upload_success", "file_id", "memo_info"]:
+        if key in st.session_state:
+            del st.session_state[key]
     st.session_state.step = "login"
-    st.session_state.upload_success = False
 
-# ==================== الواجهة الرئيسية ====================
+# ==================== تهيئة الحالة الأولية ====================
+if "step" not in st.session_state:
+    reset_session()
+
+# ==================== واجهة المستخدم - CSS ====================
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Cairo :wght@400;700&display=swap');
@@ -77,9 +84,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==================== الخطوة الأولى: تسجيل الدخول ====================
-if "step" not in st.session_state:
-    st.session_state.step = "login"
-
 if st.session_state.step == "login":
     with st.form("login_form"):
         note_number = st.text_input('رقم المذكرة')
@@ -91,8 +95,10 @@ if st.session_state.step == "login":
         df['رقم المذكرة'] = df['رقم المذكرة'].str.strip()
         df['كلمة السر'] = df['كلمة السر'].str.strip()
 
-        match = df[(df['رقم المذكرة'].str.lower() == note_number.strip().lower()) &
-                   (df['كلمة السر'].str.lower() == password.strip().lower())]
+        match = df[
+            (df['رقم المذكرة'].str.lower() == note_number.strip().lower()) &
+            (df['كلمة السر'].str.lower() == password.strip().lower())
+        ]
 
         if not match.empty:
             st.session_state.memo_info = match.iloc[0].to_dict()
@@ -130,6 +136,8 @@ elif st.session_state.step == "upload":
             st.error(f"❌ حدث خطأ أثناء رفع الملف: {e}")
         finally:
             os.unlink(temp_path)
+
+        st.experimental_rerun()  # إعادة التحميل بعد اكتمال الرفع
 
 # ==================== رسالة النجاح ====================
 if hasattr(st.session_state, "upload_success") and st.session_state.upload_success:
