@@ -34,6 +34,8 @@ def get_drive_service():
         "auth_provider_x509_cert_url": st.secrets["service_account"]["auth_provider_x509_cert_url"],
         "client_x509_cert_url": st.secrets["service_account"]["client_x509_cert_url"],
     }
+    st.write("Service Account Info:")
+    st.write(info)  # إضافة تسجيل معلومات حساب الخدمة
     credentials = service_account.Credentials.from_service_account_info(info, scopes=SCOPES)
     service = build('drive', 'v3', credentials=credentials)
     return service
@@ -113,6 +115,9 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # === الخطوة 1: التحقق من البيانات ===
+st.write("Session State at Start:")
+st.write(st.session_state)  # إضافة تسجيل حالة الجلسة
+
 if st.session_state.step == "login":
     with st.form("login_form"):
         note_number = st.text_input('رقم المذكرة')
@@ -127,6 +132,10 @@ if st.session_state.step == "login":
         note = note_number.strip().lower()
         pw = password.strip().lower()
 
+        st.write(f"Note Number: {note}, Password: {pw}")  # إضافة تسجيل القيم المدخلة
+        st.write("Dataframe:")
+        st.write(df)  # إضافة تسجيل قيم DataFrame
+
         match = df[(df['رقم المذكرة'].str.lower() == note) & (df['كلمة السر'].str.lower() == pw)]
         if not match.empty:
             st.session_state.memo_info = match.iloc[0]
@@ -137,6 +146,9 @@ if st.session_state.step == "login":
 
 # === الخطوة 2: رفع الملف ===
 elif st.session_state.step == "upload" and not st.session_state.upload_success:
+    st.write("Session State Before Upload:")
+    st.write(st.session_state)  # إضافة تسجيل حالة الجلسة
+
     memo_info = st.session_state.memo_info
     st.success("✅ تم التحقق من المعلومات بنجاح")
 
@@ -158,6 +170,7 @@ elif st.session_state.step == "upload" and not st.session_state.upload_success:
                 tmp.write(uploaded_file.read())
                 tmp_path = tmp.name
 
+            st.write(f"File Name: Memoire_{memo_info['رقم المذكرة']}.pdf")  # إضافة تسجيل اسم الملف
             with st.spinner("🚀 جاري رفع الملف إلى Google Drive..."):
                 service = get_drive_service()
                 file_id = upload_to_drive(tmp_path, f"Memoire_{memo_info['رقم المذكرة']}.pdf", service)
@@ -166,7 +179,7 @@ elif st.session_state.step == "upload" and not st.session_state.upload_success:
             st.session_state.file_id = file_id
 
         except Exception as e:
-            st.error(f"❌ حدث خطأ أثناء رفع الملف: {e}")
+            st.error(f"❌ حدث خطأ أثناء رفع الملف: {type(e).__name__}: {str(e)}")  # عرض رسالة الخطأ الكاملة
 
         finally:
             if 'tmp_path' in locals() and os.path.exists(tmp_path):
@@ -174,6 +187,9 @@ elif st.session_state.step == "upload" and not st.session_state.upload_success:
 
 # === الخطوة 3: تأكيد الرفع ===
 if st.session_state.upload_success:
+    st.write("Session State After Upload:")
+    st.write(st.session_state)  # إضافة تسجيل حالة الجلسة
+
     st.success("✅ تم إيداع المذكرة بنجاح!")
     st.info(f"📎 معرف الملف على Drive: `{st.session_state.file_id}`")
     if st.button("⬅️ إنهاء"):
