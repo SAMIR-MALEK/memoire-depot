@@ -120,7 +120,7 @@ if st.session_state.step == "login":
         if not match.empty:
             st.session_state.memo_info = match.iloc[0]
             st.session_state.step = "upload"
-            st.experimental_rerun()  # إعادة تحميل الصفحة فوراً
+            st.experimental_rerun()  # إعادة تحميل الصفحة فوراً بعد تغيير الحالة
         else:
             st.error("❌ رقم المذكرة أو كلمة السر غير صحيحة. يرجى التحقق والمحاولة مجددًا.")
 
