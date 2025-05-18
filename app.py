@@ -1,5 +1,3 @@
-ها هو الكود كاملًا مصححًا ومنسقًا بالكامل، يمكنك نسخه واستخدامه مباشرة في مشروعك:
-
 import streamlit as st
 st.set_page_config(page_title="منصة إيداع المذكرات", page_icon="📚", layout="centered")
 
@@ -176,6 +174,3 @@ if st.session_state.upload_success:
         for key in ["step", "validated", "upload_success", "file_id", "memo_info"]:
             st.session_state[key] = None if key == "memo_info" else False if key in ["validated", "upload_success"] else "login"
         st.experimental_rerun()
-
-إذا احتجت شرح أي جزء أو إضافة مميزات أخرى، فقط أخبرني!
-
