@@ -1,12 +1,15 @@
 import streamlit as st
-st.set_page_config(page_title="منصة إيداع المذكرات", page_icon="📚", layout="centered")
-
 import pandas as pd
 import os
+import tempfile
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 
+# إعداد الصفحة
+st.set_page_config(page_title="منصة إيداع المذكرات", page_icon="📚", layout="centered")
+
+# إعدادات Google Drive
 FOLDER_ID = '1TfhvUA9oqvSlj9TuLjkyHi5xsC5svY1D'
 SCOPES = ['https://www.googleapis.com/auth/drive.file']
 
@@ -44,11 +47,15 @@ def upload_to_drive(file_path, file_name, service):
     uploaded = service.files().create(body=file_metadata, media_body=media, fields='id').execute()
     return uploaded.get('id')
 
-for key in ["step", "validated", "upload_success", "file_id", "memo_info"]:
+# حالة الجلسة
+for key in ["step", "upload_success", "file_id", "memo_info"]:
     if key not in st.session_state:
-        st.session_state[key] = None if key == "memo_info" else False if key in ["validated", "upload_success"] else "login"
+        if key == "step":
+            st.session_state[key] = "login"
+        else:
+            st.session_state[key] = None if key == "memo_info" else False
 
-# ========================== الواجهة ===========================
+# واجهة CSS
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
@@ -95,6 +102,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# عنوان المنصة
 st.markdown("""
     <div class="header-container">
         <img src="https://drive.google.com/uc?id=1sBEUeqEF6tKTglXP3ePMtV4BN_929R9Y" class="header-logo">
@@ -104,12 +112,14 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# ======================== الخطوة الأولى =========================
+# === الخطوة 1: التحقق من البيانات ===
 if st.session_state.step == "login":
-    note_number = st.text_input('رقم المذكرة', key="note_input")
-    password = st.text_input('كلمة السر', type='password', key="pass_input")
+    with st.form("login_form"):
+        note_number = st.text_input('رقم المذكرة')
+        password = st.text_input('كلمة السر', type='password')
+        submitted = st.form_submit_button("✅ تأكيد")
 
-    if st.button("✅ تأكيد"):
+    if submitted:
         df = load_data()
         df['رقم المذكرة'] = df['رقم المذكرة'].str.strip()
         df['كلمة السر'] = df['كلمة السر'].str.strip()
@@ -121,13 +131,15 @@ if st.session_state.step == "login":
         if not match.empty:
             st.session_state.memo_info = match.iloc[0]
             st.session_state.step = "upload"
+            st.experimental_rerun()
         else:
             st.error("❌ رقم المذكرة أو كلمة السر غير صحيحة. يرجى التحقق والمحاولة مجددًا.")
 
-# ======================== الخطوة الثانية =========================
+# === الخطوة 2: رفع الملف ===
 elif st.session_state.step == "upload" and not st.session_state.upload_success:
     memo_info = st.session_state.memo_info
     st.success("✅ تم التحقق من المعلومات بنجاح")
+
     st.markdown(f"""
         ### 📄 عنوان المذكرة:
         {memo_info.get('عنوان المذكرة', 'غير متوفر')}
@@ -141,25 +153,30 @@ elif st.session_state.step == "upload" and not st.session_state.upload_success:
     uploaded_file = st.file_uploader("اختر الملف:", type="pdf")
 
     if uploaded_file:
-        temp_path = uploaded_file.name
-        with open(temp_path, "wb") as f:
-            f.write(uploaded_file.read())
         try:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+                tmp.write(uploaded_file.read())
+                tmp_path = tmp.name
+
             with st.spinner("🚀 جاري رفع الملف إلى Google Drive..."):
                 service = get_drive_service()
-                file_id = upload_to_drive(temp_path, f"Memoire_{memo_info['رقم المذكرة']}.pdf", service)
+                file_id = upload_to_drive(tmp_path, f"Memoire_{memo_info['رقم المذكرة']}.pdf", service)
+
             st.session_state.upload_success = True
             st.session_state.file_id = file_id
+
         except Exception as e:
             st.error(f"❌ حدث خطأ أثناء رفع الملف: {e}")
-        finally:
-            os.remove(temp_path)
 
-# ======================== رسالة النجاح بعد الرفع =========================
+        finally:
+            if 'tmp_path' in locals() and os.path.exists(tmp_path):
+                os.remove(tmp_path)
+
+# === الخطوة 3: تأكيد الرفع ===
 if st.session_state.upload_success:
     st.success("✅ تم إيداع المذكرة بنجاح!")
     st.info(f"📎 معرف الملف على Drive: `{st.session_state.file_id}`")
     if st.button("⬅️ إنهاء"):
-        for key in ["step", "validated", "upload_success", "file_id", "memo_info"]:
-            st.session_state[key] = None if key == "memo_info" else False if key in ["validated", "upload_success"] else "login"
+        for key in ["step", "upload_success", "file_id", "memo_info"]:
+            st.session_state[key] = None if key == "memo_info" else False if key == "upload_success" else "login"
         st.experimental_rerun()
