@@ -124,7 +124,7 @@ else:
         st.info("📌 تم رفع الملف وتحديث الحالة مسبقًا.")
 
     # --- زر إنهاء مع إعادة تشغيل آمنة ---
-    if st.button("🔄 إنهاء", key="btn_reset"):
+if st.button("🔄 إنهاء", key="btn_reset"):
     keys_to_delete = [key for key in st.session_state.keys() if not key.startswith("_")]
     for key in keys_to_delete:
         del st.session_state[key]
