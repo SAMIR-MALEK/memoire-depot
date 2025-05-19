@@ -22,10 +22,11 @@ DRIVE_FOLDER_ID = "1z0kUbP6f7TOBGyqKZp0vQvopL28u91MO"  # عيّن المعرف �
 # تحميل البيانات من Google Sheets
 @st.cache_data
 def load_data():
-    worksheet = gc.open_by_key(SPREADSHEET_ID).sheet1
+    worksheet = gc.open_by_key(SPREADSHEET_ID).worksheet("Feuille 1")
     data = worksheet.get_all_records()
     df = pd.DataFrame(data)
     return df, worksheet
+
 
 # تحديث حالة وتاريخ الإيداع
 def update_submission_status(worksheet, note_number):
