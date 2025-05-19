@@ -172,10 +172,11 @@ if st.session_state.upload_success:
     st.success("✅ تم إيداع المذكرة بنجاح!")
     st.info(f"📎 معرف الملف على Drive: {st.session_state.file_id}")
     if st.button("⬅️ إنهاء"):
-        # إعادة تعيين قيم الحالة بدون حذف المفاتيح
+        # بدلاً من حذف المفاتيح، أعِد تعيين القيم
         st.session_state.step = "login"
         st.session_state.validated = False
         st.session_state.upload_success = False
         st.session_state.file_id = None
         st.session_state.memo_info = None
+        
         st.experimental_rerun()
