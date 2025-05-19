@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import io
+import re
 from datetime import datetime
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
@@ -99,7 +100,11 @@ def update_submission_status(note_number):
 # --- رفع ملف PDF إلى Google Drive مع تسمية آمنة ---
 def upload_to_drive(file, note_number):
     try:
-        new_name = f"MEMOIRE_N{note_number}.pdf"
+        # دالة لتنظيف اسم الملف من الحروف غير المدعومة
+        def sanitize_text(text):
+            return re.sub(r'[^A-Za-z0-9]', '_', text)
+        
+        new_name = f"MEMOIRE_N{sanitize_text(str(note_number))}.pdf"
         file_stream = io.BytesIO(file.read())
         media = MediaIoBaseUpload(file_stream, mimetype='application/pdf')
         file_metadata = {
