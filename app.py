@@ -18,7 +18,7 @@ drive_service = build('drive', 'v3', credentials=credentials)
 
 # --- معرف الشيت ومجلد الدرايف ---
 SPREADSHEET_ID = "1Ycx-bUscF7rEpse4B5lC4xCszYLZ8uJyPJLp6bFK8zo"
-DRIVE_FOLDER_ID = "1z0kUbP6f7TOBGyqKZp0vQvopL28u91MO"
+DRIVE_FOLDER_ID = "1TfhvUA9oqvSlj9TuLjkyHi5xsC5svY1D"
 
 # --- تحميل البيانات من Google Sheets ---
 @st.cache_data(ttl=300)
