@@ -147,8 +147,8 @@ if st.session_state.step == "login":
                 st.session_state.memo_info = match.iloc[0]
                 st.session_state.step = "upload"
         else:
-            st.error("❌ رقم المذكرة أو كلمة السر غير صحيحة. يرجى التحقق والمحاولة مجددًا.")
-
+#           st.error("❌ رقم المذكرة أو كلمة السر غير صحيحة. يرجى التحقق والمحاولة مجددًا.")
+            st.write("📧 إيميل حساب الخدمة:", st.secrets["service_account"]["client_email"])
 # ======================== الخطوة الثانية =========================
 elif st.session_state.step == "upload" and not st.session_state.upload_success:
     memo_info = st.session_state.memo_info
@@ -193,5 +193,5 @@ if st.session_state.upload_success:
         st.session_state.upload_success = False
         st.session_state.file_id = None
         st.session_state.memo_info = None
-
+        
         st.experimental_rerun()
