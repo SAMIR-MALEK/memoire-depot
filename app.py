@@ -1,8 +1,7 @@
 import streamlit as st
-st.set_page_config(page_title="منصة إيداع المذكرات", page_icon="📚", layout="centered")
-
 import pandas as pd
 import os
+from datetime import datetime
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
@@ -14,13 +13,11 @@ SCOPES = ['https://www.googleapis.com/auth/drive.file']
 def load_data():
     df = pd.read_excel("حالة تسجيل المذكرات.xlsx")
     df.columns = df.columns.str.strip()  # إزالة الفراغات من أسماء الأعمدة
-    # التأكد من وجود الأعمدة المطلوبة
     required_columns = ["الطالب الأول", "الطالب الثاني", "رقم المذكرة", "عنوان المذكرة",
                         "التخصص", "الأستاذ", "كلمة السر", "تم الإيداع", "تاريخ الإيداع"]
     missing_cols = [col for col in required_columns if col not in df.columns]
     if missing_cols:
         raise ValueError(f"الأعمدة التالية مفقودة في ملف الإكسل: {missing_cols}")
-    # تحويل كل القيم إلى نصوص (Strings) وتنظيف عمود "تم الإيداع"
     df = df.astype(str)
     df["تم الإيداع"] = df["تم الإيداع"].fillna("").str.strip().str.lower()
     df["تاريخ الإيداع"] = df["تاريخ الإيداع"].fillna("")
@@ -52,6 +49,18 @@ def upload_to_drive(file_path, file_name, service):
     media = MediaFileUpload(file_path, mimetype='application/pdf')
     uploaded = service.files().create(body=file_metadata, media_body=media, fields='id').execute()
     return uploaded.get('id')
+
+def update_deposit_status(note_number):
+    df = pd.read_excel("حالة تسجيل المذكرات.xlsx")
+    df.columns = df.columns.str.strip()
+    idx = df.index[df['رقم المذكرة'].astype(str).str.strip() == str(note_number).strip()]
+    if not idx.empty:
+        idx = idx[0]
+        df.at[idx, 'تم الإيداع'] = 'نعم'
+        df.at[idx, 'تاريخ الإيداع'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        df.to_excel("حالة تسجيل المذكرات.xlsx", index=False)
+        return True
+    return False
 
 for key in ["step", "validated", "upload_success", "file_id", "memo_info"]:
     if key not in st.session_state:
@@ -164,6 +173,12 @@ elif st.session_state.step == "upload" and not st.session_state.upload_success:
             with st.spinner("🚀 جاري رفع الملف إلى Google Drive..."):
                 service = get_drive_service()
                 file_id = upload_to_drive(temp_path, f"Memoire_{memo_info['رقم المذكرة']}.pdf", service)
+            updated = update_deposit_status(memo_info['رقم المذكرة'])
+            if updated:
+                st.success("✅ تم تحديث حالة الإيداع في الملف بنجاح.")
+            else:
+                st.warning("⚠️ لم يتم تحديث حالة الإيداع في الملف (المذكرة غير موجودة).")
+
             st.session_state.upload_success = True
             st.session_state.file_id = file_id
         except Exception as e:
