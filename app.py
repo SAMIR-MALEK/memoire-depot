@@ -38,6 +38,28 @@ def load_data():
         st.error(f"❌ خطأ في تحميل البيانات من Google Sheets: {e}")
         st.stop()
 
+# --- التحقق مما إذا تم الإيداع مسبقًا ---
+def is_already_submitted(note_number):
+    try:
+        result = sheets_service.spreadsheets().values().get(
+            spreadsheetId=SPREADSHEET_ID,
+            range="Feuille 1!A1:Z1000"
+        ).execute()
+        values = result.get('values', [])
+        df = pd.DataFrame(values[1:], columns=values[0])
+        memo = df[df["رقم المذكرة"].astype(str).str.strip() == str(note_number).strip()]
+        if memo.empty:
+            return False, None
+        deposit_status = memo.iloc[0]["تم الإيداع"]
+        submission_date = memo.iloc[0]["تاريخ الإيداع"]
+        if (isinstance(deposit_status, str) and deposit_status.strip() == "نعم") or \
+           (isinstance(submission_date, str) and submission_date.strip() != ""):
+            return True, submission_date
+        return False, None
+    except Exception as e:
+        st.error(f"❌ خطأ في التحقق من حالة الإيداع: {e}")
+        return False, None
+
 # --- تحديث حالة الإيداع في Google Sheets ---
 def update_submission_status(note_number):
     try:
@@ -74,40 +96,15 @@ def update_submission_status(note_number):
         st.error(f"❌ فشل تحديث حالة الإيداع: {e}")
         return False
 
-# --- تحقق إذا كانت المذكرة مودعة مسبقًا ---
-def is_already_submitted(note_number):
+# --- رفع ملف PDF إلى Google Drive مع تسمية آمنة ---
+def upload_to_drive(file, note_number):
     try:
-        result = sheets_service.spreadsheets().values().get(
-            spreadsheetId=SPREADSHEET_ID,
-            range="Feuille 1!A1:Z1000"
-        ).execute()
-        values = result.get('values', [])
-        df = pd.DataFrame(values[1:], columns=values[0])
-        memo = df[df["رقم المذكرة"].astype(str).str.strip() == str(note_number).strip()]
-        if memo.empty:
-            return False, None
-
-        deposited = str(memo.iloc[0].get("تم الإيداع", "")).strip()
-        date = str(memo.iloc[0].get("تاريخ الإيداع", "")).strip()
-
-        if (deposited == "نعم") or (date != "" and date.lower() != "nan"):
-            return True, date if date else "غير محدد"
-        else:
-            return False, None
-
-    except Exception as e:
-        st.error(f"❌ خطأ في التحقق من حالة الإيداع: {e}")
-        return False, None
-
-# --- رفع ملف PDF إلى Google Drive مع حفظ الوصف (اسم الملف الأصلي) ---
-def upload_to_drive(file, filename, description=None):
-    try:
+        new_name = f"MEMOIRE_N{note_number}.pdf"
         file_stream = io.BytesIO(file.read())
         media = MediaIoBaseUpload(file_stream, mimetype='application/pdf')
         file_metadata = {
-            'name': filename,
-            'parents': [DRIVE_FOLDER_ID],
-            'description': description or ''
+            'name': new_name,
+            'parents': [DRIVE_FOLDER_ID]
         }
         uploaded = drive_service.files().create(body=file_metadata, media_body=media, fields='id').execute()
         return uploaded.get('id')
@@ -118,17 +115,20 @@ def upload_to_drive(file, filename, description=None):
 # --- واجهة Streamlit ---
 st.set_page_config(page_title="إيداع مذكرات التخرج", page_icon="📥", layout="centered")
 
-st.markdown("<h1 style='text-align:center; color:#4B8BBE;'>📥  11منصة إيداع مذكرات التخرج</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align:center; color:#4B8BBE;'>📥 منصة إيداع مذكرات التخرج</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align:center; font-size:18px;'>جامعة برج بوعريريج</p>", unsafe_allow_html=True)
 st.markdown("---")
 
+# --- تحميل بيانات الطلبة ---
 df = load_data()
 
+# --- إدارة حالة الجلسة ---
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 if "file_uploaded" not in st.session_state:
     st.session_state.file_uploaded = False
 
+# --- واجهة التحقق ---
 if not st.session_state.authenticated:
     note_number = st.text_input("🔢 أدخل رقم المذكرة:", key="note_input")
     password = st.text_input("🔐 أدخل كلمة السر:", type="password", key="pass_input")
@@ -137,15 +137,16 @@ if not st.session_state.authenticated:
         if not note_number or not password:
             st.warning("⚠️ الرجاء إدخال رقم المذكرة وكلمة السر.")
         else:
-            memo_info = df[df["رقم المذكرة"].astype(str).str.strip() == str(note_number).strip()]
-            if memo_info.empty:
-                st.error("❌ رقم المذكرة غير موجود.")
-            elif memo_info.iloc[0]["كلمة السر"] != password:
-                st.error("❌ كلمة السر غير صحيحة.")
+            # التحقق من حالة الإيداع مسبقًا
+            already_submitted, submission_date = is_already_submitted(note_number)
+            if already_submitted:
+                st.error(f"❌ المذكرة رقم {note_number} تم إيداعها سابقًا بتاريخ: {submission_date}. الرجاء الاتصال بالإدارة لأي استفسار.")
             else:
-                already_submitted, submission_date = is_already_submitted(note_number)
-                if already_submitted:
-                    st.error(f"❌ تم إيداع المذكرة سابقًا بتاريخ: {submission_date}. يرجى الاتصال بالإدارة لأي استفسار.")
+                memo_info = df[df["رقم المذكرة"].astype(str).str.strip() == str(note_number).strip()]
+                if memo_info.empty:
+                    st.error("❌ رقم المذكرة غير موجود.")
+                elif memo_info.iloc[0]["كلمة السر"] != password:
+                    st.error("❌ كلمة السر غير صحيحة.")
                 else:
                     st.session_state.authenticated = True
                     st.session_state.note_number = note_number
@@ -157,10 +158,7 @@ else:
 
     if uploaded_file and not st.session_state.file_uploaded:
         with st.spinner("⏳ جاري رفع الملف..."):
-            # تحويل اسم الملف إلى اسم نظيف مع رقم المذكرة
-            clean_name = f"MEMOIRE_N{st.session_state.note_number}.pdf"
-            original_name = uploaded_file.name  # اسم الملف الأصلي بالعربية أو أي حروف
-            file_id = upload_to_drive(uploaded_file, clean_name, description=original_name)
+            file_id = upload_to_drive(uploaded_file, st.session_state.note_number)
             if file_id:
                 updated = update_submission_status(st.session_state.note_number)
                 if updated:
