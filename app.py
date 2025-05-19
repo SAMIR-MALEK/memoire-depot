@@ -1,3 +1,4 @@
+import streamlit as st
 import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
@@ -16,7 +17,7 @@ drive_service = build('drive', 'v3', credentials=credentials)
 
 # إعداد معرف الشيت ومجلد الدرايف
 SPREADSHEET_ID = "1Ycx-bUscF7rEpse4B5lC4xCszYLZ8uJyPJLp6bFK8zo"
-DRIVE_FOLDER_ID = "YOUR_FOLDER_ID_HERE"  # ضع هنا معرف مجلد Drive الذي تُرفع فيه المذكرات
+DRIVE_FOLDER_ID = "1z0kUbP6f7TOBGyqKZp0vQvopL28u91MO"  # عيّن المعرف الصحيح لمجلد Drive
 
 # تحميل البيانات من Google Sheets
 @st.cache_data
@@ -31,7 +32,7 @@ def update_submission_status(worksheet, note_number):
     df = pd.DataFrame(worksheet.get_all_records())
     row_index = df[df["رقم المذكرة"].astype(str).str.strip() == str(note_number).strip()].index
     if not row_index.empty:
-        idx = row_index[0] + 2  # الصف الأول للعناوين
+        idx = row_index[0] + 2
         worksheet.update_cell(idx, df.columns.get_loc("تم الإيداع") + 1, "نعم")
         worksheet.update_cell(idx, df.columns.get_loc("تاريخ الإيداع") + 1, datetime.now().strftime("%Y-%m-%d %H:%M"))
 
@@ -47,6 +48,7 @@ def upload_to_drive(file, filename):
     return uploaded.get('id')
 
 # واجهة التطبيق
+st.set_page_config(page_title="إيداع مذكرات التخرج", page_icon="📥", layout="centered")
 st.title("📥 منصة إيداع مذكرات التخرج")
 st.markdown("جامعة برج بوعريريج")
 
@@ -99,7 +101,12 @@ else:
         st.info("📌 تم رفع الملف وتحديث الحالة مسبقًا.")
 
     if st.button("🔄 إنهاء"):
-        st.session_state.authenticated = False
-        st.session_state.file_uploaded = False
+        for key in ["authenticated", "file_uploaded", "note_number"]:
+            if key in st.session_state:
+                del st.session_state[key]
         st.experimental_rerun()
-
+    if st.button("🔄 إنهاء"):
+        for key in ["authenticated", "file_uploaded", "note_number"]:
+            if key in st.session_state:
+                del st.session_state[key]
+        st.experimental_rerun()
