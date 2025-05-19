@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import io
 import re
+import tempfile
 from datetime import datetime
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
@@ -97,21 +98,22 @@ def update_submission_status(note_number):
         st.error(f"❌ فشل تحديث حالة الإيداع: {e}")
         return False
 
-# --- رفع ملف PDF إلى Google Drive مع تسمية آمنة ---
+# --- رفع ملف PDF إلى Google Drive مع ملف مؤقت واسم آمن ---
 def sanitize_text(text):
-    # تحويل كل شيء إلى حروف وأرقام إنجليزية فقط باستبدال غيرها بـ _
     return re.sub(r'[^A-Za-z0-9]+', '_', text)
 
 def upload_to_drive(file, note_number):
     try:
         new_name = f"MEMOIRE_N{sanitize_text(str(note_number))}.pdf"
-        file.seek(0)
-        media = MediaIoBaseUpload(file, mimetype='application/pdf', resumable=True)
-        file_metadata = {
-            'name': new_name,
-            'parents': [DRIVE_FOLDER_ID]
-        }
-        uploaded = drive_service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+            tmp.write(file.read())
+            tmp.seek(0)
+            media = MediaIoBaseUpload(tmp, mimetype='application/pdf', resumable=True)
+            file_metadata = {
+                'name': new_name,
+                'parents': [DRIVE_FOLDER_ID]
+            }
+            uploaded = drive_service.files().create(body=file_metadata, media_body=media, fields='id').execute()
         return uploaded.get('id')
     except Exception as e:
         st.error(f"❌ خطأ في رفع الملف إلى Google Drive: {e}")
@@ -124,16 +126,13 @@ st.markdown("<h1 style='text-align:center; color:#4B8BBE;'>📥 منصة إيد�
 st.markdown("<p style='text-align:center; font-size:18px;'>جامعة برج بوعريريج</p>", unsafe_allow_html=True)
 st.markdown("---")
 
-# --- تحميل بيانات الطلبة ---
 df = load_data()
 
-# --- إدارة حالة الجلسة ---
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 if "file_uploaded" not in st.session_state:
     st.session_state.file_uploaded = False
 
-# --- واجهة التحقق ---
 if not st.session_state.authenticated:
     note_number = st.text_input("🔢 أدخل رقم المذكرة:", key="note_input")
     password = st.text_input("🔐 أدخل كلمة السر:", type="password", key="pass_input")
@@ -142,7 +141,6 @@ if not st.session_state.authenticated:
         if not note_number or not password:
             st.warning("⚠️ الرجاء إدخال رقم المذكرة وكلمة السر.")
         else:
-            # التحقق من حالة الإيداع مسبقًا
             already_submitted, submission_date = is_already_submitted(note_number)
             if already_submitted:
                 st.error(f"❌ المذكرة رقم {note_number} تم إيداعها سابقًا بتاريخ: {submission_date}. الرجاء الاتصال بالإدارة لأي استفسار.")
@@ -188,7 +186,6 @@ else:
             mime="text/plain"
         )
 
-# --- تنفيذ إعادة التهيئة بعد rerun ---
 if st.session_state.get("reset_app"):
     for key in ["authenticated", "note_number", "file_uploaded", "reset_app"]:
         if key in st.session_state:
