@@ -112,6 +112,7 @@ st.markdown("""
     }
     </style>
 """, unsafe_allow_html=True)
+st.write("📧 إيميل حساب الخدمة:", st.secrets["service_account"]["client_email"])
 
 st.markdown("""
     <div class="header-container">
@@ -147,8 +148,8 @@ if st.session_state.step == "login":
                 st.session_state.memo_info = match.iloc[0]
                 st.session_state.step = "upload"
         else:
-#           st.error("❌ رقم المذكرة أو كلمة السر غير صحيحة. يرجى التحقق والمحاولة مجددًا.")
-            st.write("📧 إيميل حساب الخدمة:", st.secrets["service_account"]["client_email"])
+            st.error("❌ رقم المذكرة أو كلمة السر غير صحيحة. يرجى التحقق والمحاولة مجددًا.")
+       
 # ======================== الخطوة الثانية =========================
 elif st.session_state.step == "upload" and not st.session_state.upload_success:
     memo_info = st.session_state.memo_info
