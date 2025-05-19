@@ -13,9 +13,17 @@ SCOPES = ['https://www.googleapis.com/auth/drive.file']
 @st.cache_data
 def load_data():
     df = pd.read_excel("حالة تسجيل المذكرات.xlsx")
-    st.write("أسماء الأعمدة في ملف الإكسل:", df.columns.tolist())  # هذا السطر للتأكد فقط
-    df.columns = df.columns.str.strip()
+    df.columns = df.columns.str.strip()  # إزالة الفراغات من أسماء الأعمدة
+    # التأكد من وجود الأعمدة المطلوبة
+    required_columns = ["الطالب الأول", "الطالب الثاني", "رقم المذكرة", "عنوان المذكرة",
+                        "التخصص", "الأستاذ", "كلمة السر", "تم الإيداع", "تاريخ الإيداع"]
+    missing_cols = [col for col in required_columns if col not in df.columns]
+    if missing_cols:
+        raise ValueError(f"الأعمدة التالية مفقودة في ملف الإكسل: {missing_cols}")
+    # تحويل كل القيم إلى نصوص (Strings) وتنظيف عمود "تم الإيداع"
     df = df.astype(str)
+    df["تم الإيداع"] = df["تم الإيداع"].fillna("").str.strip().str.lower()
+    df["تاريخ الإيداع"] = df["تاريخ الإيداع"].fillna("")
     return df
 
 @st.cache_resource
