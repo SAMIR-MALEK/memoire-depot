@@ -13,14 +13,14 @@ SCOPES = ['https://www.googleapis.com/auth/spreadsheets',
 
 info = st.secrets["service_account"]
 credentials = Credentials.from_service_account_info(info, scopes=SCOPES)
-
 gc = gspread.authorize(credentials)
 drive_service = build('drive', 'v3', credentials=credentials)
-sheets_service = build('sheets', 'v4', credentials=credentials)
 
+# --- معرف الشيت ومجلد الدرايف ---
 SPREADSHEET_ID = "1Ycx-bUscF7rEpse4B5lC4xCszYLZ8uJyPJLp6bFK8zo"
 DRIVE_FOLDER_ID = "1TfhvUA9oqvSlj9TuLjkyHi5xsC5svY1D"
 
+# --- تحميل البيانات من Google Sheets ---
 @st.cache_data(ttl=300)
 def load_data():
     try:
@@ -32,44 +32,27 @@ def load_data():
         st.error(f"❌ خطأ في تحميل البيانات من Google Sheets: {e}")
         st.stop()
 
-def update_submission_status(sheets_service, spreadsheet_id, note_number):
+# --- تحديث حالة الإيداع في Google Sheets ---
+def update_submission_status(worksheet, note_number):
     try:
-        sheet = gc.open_by_key(spreadsheet_id).worksheet("Feuille 1")
-        data = sheet.get_all_records()
-        df = pd.DataFrame(data)
-        
+        df = pd.DataFrame(worksheet.get_all_records())
         row_idx = df[df["رقم المذكرة"].astype(str).str.strip() == str(note_number).strip()].index
         if row_idx.empty:
             st.error("❌ رقم المذكرة غير موجود في الشيت أثناء التحديث.")
             return False
-        
-        idx = row_idx[0] + 2
-        
+        idx = row_idx[0] + 2  # الصفوف في Sheets تبدأ من 1 + صف العنوان
+
         col_deposit = df.columns.get_loc("تم الإيداع") + 1
         col_date = df.columns.get_loc("تاريخ الإيداع") + 1
 
-        range_deposit = f"Feuille 1!{chr(64+col_deposit)}{idx}"
-        range_date = f"Feuille 1!{chr(64+col_date)}{idx}"
-
-        sheets_service.spreadsheets().values().update(
-            spreadsheetId=spreadsheet_id,
-            range=range_deposit,
-            valueInputOption="RAW",
-            body={"values": [["نعم"]]}
-        ).execute()
-
-        sheets_service.spreadsheets().values().update(
-            spreadsheetId=spreadsheet_id,
-            range=range_date,
-            valueInputOption="RAW",
-            body={"values": [[datetime.now().strftime("%Y-%m-%d %H:%M")]]}
-        ).execute()
-
+        worksheet.update_cell(idx, col_deposit, "نعم")
+        worksheet.update_cell(idx, col_date, datetime.now().strftime("%Y-%m-%d %H:%M"))
         return True
     except Exception as e:
         st.error(f"❌ فشل تحديث حالة الإيداع: {e}")
         return False
 
+# --- رفع ملف PDF إلى Google Drive ---
 def upload_to_drive(file, filename):
     try:
         file_stream = io.BytesIO(file.read())
@@ -84,19 +67,23 @@ def upload_to_drive(file, filename):
         st.error(f"❌ خطأ في رفع الملف إلى Google Drive: {e}")
         return None
 
+# --- تهيئة الصفحة ---
 st.set_page_config(page_title="إيداع مذكرات التخرج", page_icon="📥", layout="centered")
 
 st.markdown("<h1 style='text-align:center; color:#4B8BBE;'>📥 منصة إيداع مذكرات التخرج</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align:center; font-size:18px;'>جامعة برج بوعريريج</p>", unsafe_allow_html=True)
 st.markdown("---")
 
+# --- تحميل بيانات الطلبة ---
 df, worksheet = load_data()
 
+# --- إدارة حالة الجلسة ---
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 if "file_uploaded" not in st.session_state:
     st.session_state.file_uploaded = False
 
+# --- واجهة التحقق ---
 if not st.session_state.authenticated:
     note_number = st.text_input("🔢 أدخل رقم المذكرة:", key="note_input")
     password = st.text_input("🔐 أدخل كلمة السر:", type="password", key="pass_input")
@@ -123,7 +110,7 @@ else:
         with st.spinner("⏳ جاري رفع الملف..."):
             file_id = upload_to_drive(uploaded_file, uploaded_file.name)
             if file_id:
-                updated = update_submission_status(sheets_service, SPREADSHEET_ID, st.session_state.note_number)
+                updated = update_submission_status(worksheet, st.session_state.note_number)
                 if updated:
                     st.success("✅ تم إيداع المذكرة وتحديث الحالة بنجاح!")
                     st.markdown(f"📎 معرف الملف على Drive: `{file_id}`")
@@ -136,6 +123,10 @@ else:
     elif st.session_state.file_uploaded:
         st.info("📌 تم رفع الملف وتحديث الحالة مسبقًا.")
 
+    # --- زر إنهاء مع إعادة تشغيل آمنة ---
     if st.button("🔄 إنهاء", key="btn_reset"):
+        st.session_state["reset_triggered"] = True
+
+    if st.session_state.get("reset_triggered", False):
         st.session_state.clear()
         st.experimental_rerun()
