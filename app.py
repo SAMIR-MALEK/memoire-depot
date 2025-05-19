@@ -1,197 +1,105 @@
 import streamlit as st
 import pandas as pd
-import os
+import gspread
+from google.oauth2.service_account import Credentials
 from datetime import datetime
-from google.oauth2 import service_account
 from googleapiclient.discovery import build
-from googleapiclient.http import MediaFileUpload
+from googleapiclient.http import MediaIoBaseUpload
+import io
 
-FOLDER_ID = '1TfhvUA9oqvSlj9TuLjkyHi5xsC5svY1D'
-SCOPES = ['https://www.googleapis.com/auth/drive.file']
+# إعداد الاتصال بـ Google Sheets و Google Drive
+SCOPES = ['https://www.googleapis.com/auth/spreadsheets',
+          'https://www.googleapis.com/auth/drive']
+info = st.secrets["service_account"]
+credentials = Credentials.from_service_account_info(info, scopes=SCOPES)
+gc = gspread.authorize(credentials)
+drive_service = build('drive', 'v3', credentials=credentials)
 
+# إعداد معرف الشيت ومجلد الدرايف
+SPREADSHEET_ID = "1Ycx-bUscF7rEpse4B5lC4xCszYLZ8uJyPJLp6bFK8zo"
+DRIVE_FOLDER_ID = "YOUR_FOLDER_ID_HERE"  # ضع هنا معرف مجلد Drive الذي تُرفع فيه المذكرات
+
+# تحميل البيانات من Google Sheets
 @st.cache_data
 def load_data():
-    df = pd.read_excel("حالة تسجيل المذكرات.xlsx")
-    df.columns = df.columns.str.strip()  # إزالة الفراغات من أسماء الأعمدة
-    required_columns = ["الطالب الأول", "الطالب الثاني", "رقم المذكرة", "عنوان المذكرة",
-                        "التخصص", "الأستاذ", "كلمة السر", "تم الإيداع", "تاريخ الإيداع"]
-    missing_cols = [col for col in required_columns if col not in df.columns]
-    if missing_cols:
-        raise ValueError(f"الأعمدة التالية مفقودة في ملف الإكسل: {missing_cols}")
-    df = df.astype(str)
-    df["تم الإيداع"] = df["تم الإيداع"].fillna("").str.strip().str.lower()
-    df["تاريخ الإيداع"] = df["تاريخ الإيداع"].fillna("")
-    return df
+    worksheet = gc.open_by_key(SPREADSHEET_ID).sheet1
+    data = worksheet.get_all_records()
+    df = pd.DataFrame(data)
+    return df, worksheet
 
-@st.cache_resource
-def get_drive_service():
-    info = {
-        "type": st.secrets["service_account"]["type"],
-        "project_id": st.secrets["service_account"]["project_id"],
-        "private_key_id": st.secrets["service_account"]["private_key_id"],
-        "private_key": st.secrets["service_account"]["private_key"].replace("\\n", "\n"),
-        "client_email": st.secrets["service_account"]["client_email"],
-        "client_id": st.secrets["service_account"]["client_id"],
-        "auth_uri": st.secrets["service_account"]["auth_uri"],
-        "token_uri": st.secrets["service_account"]["token_uri"],
-        "auth_provider_x509_cert_url": st.secrets["service_account"]["auth_provider_x509_cert_url"],
-        "client_x509_cert_url": st.secrets["service_account"]["client_x509_cert_url"],
-    }
-    credentials = service_account.Credentials.from_service_account_info(info, scopes=SCOPES)
-    service = build('drive', 'v3', credentials=credentials)
-    return service
+# تحديث حالة وتاريخ الإيداع
+def update_submission_status(worksheet, note_number):
+    df = pd.DataFrame(worksheet.get_all_records())
+    row_index = df[df["رقم المذكرة"].astype(str).str.strip() == str(note_number).strip()].index
+    if not row_index.empty:
+        idx = row_index[0] + 2  # الصف الأول للعناوين
+        worksheet.update_cell(idx, df.columns.get_loc("تم الإيداع") + 1, "نعم")
+        worksheet.update_cell(idx, df.columns.get_loc("تاريخ الإيداع") + 1, datetime.now().strftime("%Y-%m-%d %H:%M"))
 
-def upload_to_drive(file_path, file_name, service):
+# رفع ملف إلى Google Drive
+def upload_to_drive(file, filename):
+    file_stream = io.BytesIO(file.read())
+    media = MediaIoBaseUpload(file_stream, mimetype='application/pdf')
     file_metadata = {
-        'name': file_name,
-        'parents': [FOLDER_ID]
+        'name': filename,
+        'parents': [DRIVE_FOLDER_ID]
     }
-    media = MediaFileUpload(file_path, mimetype='application/pdf')
-    uploaded = service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+    uploaded = drive_service.files().create(body=file_metadata, media_body=media, fields='id').execute()
     return uploaded.get('id')
 
-def update_excel_after_deposit(note_number):
-    df = pd.read_excel("حالة تسجيل المذكرات.xlsx")
-    df.columns = df.columns.str.strip()
-    idx = df[df['رقم المذكرة'].astype(str).str.strip() == str(note_number).strip()].index
-    if not idx.empty:
-        idx = idx[0]
-        df.at[idx, 'تم الإيداع'] = 'نعم'
-        df.at[idx, 'تاريخ الإيداع'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        df.to_excel("حالة تسجيل المذكرات.xlsx", index=False)
-    else:
-        st.error("لم يتم العثور على رقم المذكرة في ملف الإكسل لتحديث الحالة.")
+# واجهة التطبيق
+st.title("📥 منصة إيداع مذكرات التخرج")
+st.markdown("جامعة برج بوعريريج")
 
-for key in ["step", "validated", "upload_success", "file_id", "memo_info"]:
-    if key not in st.session_state:
-        st.session_state[key] = None if key == "memo_info" else False if key in ["validated", "upload_success"] else "login"
+# تحميل البيانات
+try:
+    df, worksheet = load_data()
+except Exception as e:
+    st.error(f"فشل تحميل البيانات من Google Sheets: {e}")
+    st.stop()
 
-# ========================== الواجهة ===========================
-st.markdown("""
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
-    html, body, [class*="css"]  {
-        font-family: 'Cairo', sans-serif !important;
-    }
-    .main {
-        background-color: #1E2A38;
-        color: #ffffff;
-    }
-    .block-container {
-        padding: 2rem;
-        background-color: #243447;
-        border-radius: 12px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-        max-width: 700px;
-        margin: auto;
-    }
-    label, h1, h2, h3, h4, h5, h6, p, span, .stTextInput label {
-        color: #ffffff !important;
-    }
-    input, button {
-        font-size: 16px !important;
-    }
-    button {
-        background-color: #256D85 !important;
-        color: white !important;
-        border: none !important;
-        padding: 10px 20px !important;
-        border-radius: 6px !important;
-        transition: background-color 0.3s ease;
-    }
-    button:hover {
-        background-color: #2C89A0 !important;
-    }
-    .header-container {
-        text-align: center;
-        margin-bottom: 30px;
-    }
-    .header-logo {
-        width: 70px;
-        margin-bottom: 10px;
-    }
-    </style>
-""", unsafe_allow_html=True)
+# حالة التحقق
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+if "file_uploaded" not in st.session_state:
+    st.session_state.file_uploaded = False
 
-st.markdown("""
-    <div class="header-container">
-        <img src="https://drive.google.com/uc?id=1sBEUeqEF6tKTglXP3ePMtV4BN_929R9Y" class="header-logo">
-        <h2>📚 منصة إيداع مذكرات التخرج</h2>
-        <h4>كلية الحقوق والعلوم السياسية</h4>
-        <h5>جامعة برج بوعريريج</h5>
-    </div>
-""", unsafe_allow_html=True)
+if not st.session_state.authenticated:
+    note_number = st.text_input("🔢 أدخل رقم المذكرة:")
+    password = st.text_input("🔐 أدخل كلمة السر:", type="password")
 
-# ======================== الخطوة الأولى =========================
-if st.session_state.step == "login":
-    note_number = st.text_input('رقم المذكرة', key="note_input")
-    password = st.text_input('كلمة السر', type='password', key="pass_input")
-
-    if st.button("✅ تأكيد"):
-        df = load_data()
-        df['رقم المذكرة'] = df['رقم المذكرة'].str.strip()
-        df['كلمة السر'] = df['كلمة السر'].str.strip()
-        df['تم الإيداع'] = df['تم الإيداع'].fillna("").str.strip().str.lower()
-        df['تاريخ الإيداع'] = df['تاريخ الإيداع'].fillna("")
-
-        note = note_number.strip().lower()
-        pw = password.strip().lower()
-
-        match = df[(df['رقم المذكرة'].str.lower() == note) & (df['كلمة السر'].str.lower() == pw)]
-
-        if not match.empty:
-            if match.iloc[0].get('تم الإيداع', '') == 'نعم':
-                deposit_date = match.iloc[0].get('تاريخ الإيداع', 'غير محدد')
-                st.warning(f"⚠️ لقد تم إيداع هذه المذكرة مسبقًا بتاريخ **{deposit_date}**.\n\nإذا كنت ترى أن هناك خطأ، يرجى التواصل مع الإدارة.")
+    if st.button("✅ تحقق"):
+        if note_number and password:
+            memo_info = df[df["رقم المذكرة"].astype(str).str.strip() == str(note_number).strip()]
+            if not memo_info.empty:
+                if memo_info.iloc[0]["كلمة السر"] == password:
+                    st.session_state.authenticated = True
+                    st.session_state.note_number = note_number
+                    st.success("تم التحقق بنجاح، يمكنك رفع المذكرة الآن")
+                else:
+                    st.error("❌ كلمة السر غير صحيحة")
             else:
-                st.session_state.memo_info = match.iloc[0]
-                st.session_state.step = "upload"
+                st.error("❌ رقم المذكرة غير موجود")
         else:
-            st.error("❌ رقم المذكرة أو كلمة السر غير صحيحة. يرجى التحقق والمحاولة مجددًا.")
-       
-# ======================== الخطوة الثانية =========================
-elif st.session_state.step == "upload" and not st.session_state.upload_success:
-    memo_info = st.session_state.memo_info
-    st.success("✅ تم التحقق من المعلومات بنجاح")
-    st.markdown(f"""
-        ### 📄 عنوان المذكرة:
-        {memo_info.get('عنوان المذكرة', 'غير متوفر')}
-        ### 🎓 الطلبة:
-        - {memo_info.get('الطالب الأول', '---')}
-        {f"- {memo_info.get('الطالب الثاني')}" if pd.notna(memo_info.get('الطالب الثاني')) else ""}
-    """)
+            st.warning("الرجاء إدخال رقم المذكرة وكلمة السر")
+else:
+    st.success("تم التحقق بنجاح، يمكنك رفع المذكرة الآن")
+    uploaded_file = st.file_uploader("📤 رفع ملف المذكرة (PDF فقط)", type="pdf")
 
-    st.markdown("---")
-    st.subheader("📤 رفع ملف المذكرة (PDF فقط)")
-    uploaded_file = st.file_uploader("اختر الملف:", type="pdf")
-
-    if uploaded_file:
-        temp_path = uploaded_file.name
-        with open(temp_path, "wb") as f:
-            f.write(uploaded_file.read())
+    if uploaded_file is not None and not st.session_state.file_uploaded:
         try:
-            with st.spinner("🚀 جاري رفع الملف إلى Google Drive..."):
-                service = get_drive_service()
-                file_id = upload_to_drive(temp_path, f"Memoire_{memo_info['رقم المذكرة']}.pdf", service)
-            
-            update_excel_after_deposit(memo_info['رقم المذكرة'])  # تحديث ملف الإكسل بعد الرفع
-
-            st.session_state.upload_success = True
-            st.session_state.file_id = file_id
+            file_id = upload_to_drive(uploaded_file, uploaded_file.name)
+            update_submission_status(worksheet, st.session_state.note_number)
+            st.session_state.file_uploaded = True
+            st.success("✅ تم إيداع المذكرة بنجاح!")
+            st.markdown(f"📎 معرف الملف على Drive: `{file_id}`")
         except Exception as e:
-            st.error(f"❌ حدث خطأ أثناء رفع الملف: {e}")
-        finally:
-            os.remove(temp_path)
+            st.error(f"فشل رفع الملف أو تحديث الحالة: {e}")
 
-# ======================== رسالة النجاح بعد الرفع =========================
-if st.session_state.upload_success:
-    st.success("✅ تم إيداع المذكرة بنجاح!")
-    st.info(f"📎 معرف الملف على Drive: {st.session_state.file_id}")
-    if st.button("⬅️ إنهاء"):
-        st.session_state.step = "login"
-        st.session_state.validated = False
-        st.session_state.upload_success = False
-        st.session_state.file_id = None
-        st.session_state.memo_info = None
-        
+    elif st.session_state.file_uploaded:
+        st.info("📌 تم رفع الملف وتحديث الحالة مسبقًا.")
+
+    if st.button("🔄 إنهاء"):
+        st.session_state.authenticated = False
+        st.session_state.file_uploaded = False
         st.experimental_rerun()
