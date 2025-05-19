@@ -150,6 +150,7 @@ elif st.session_state.file_uploaded:
     st.info("📌 لا حاجة لأي خطوة إضافية. يمكنك إغلاق الصفحة أو حفظ هذا الوصل كدليل.")
     # يمكن توليد وصل أو عرض تفاصيل هنا
 
+
 # --- تنفيذ إعادة التهيئة بعد rerun ---
 if st.session_state.get("reset_app"):
     for key in ["authenticated", "note_number", "file_uploaded", "reset_app"]:
