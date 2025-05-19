@@ -57,7 +57,9 @@ st.markdown("جامعة برج بوعريريج")
 try:
     df, worksheet = load_data()
 except Exception as e:
-    st.error(f"فشل تحميل البيانات من Google Sheets: {e}")
+    import traceback
+    st.error("فشل تحميل البيانات من Google Sheets")
+    st.code(traceback.format_exc())  # طباعة تتبع الخطأ كاملًا
     st.stop()
 
 # حالة التحقق
