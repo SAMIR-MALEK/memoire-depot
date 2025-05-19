@@ -38,17 +38,27 @@ def load_data():
         st.error(f"❌ خطأ في تحميل البيانات من Google Sheets: {e}")
         st.stop()
 
-# --- التحقق من وجود إيداع سابق ---
+# --- التحقق مما إذا تم الإيداع مسبقًا ---
 def is_already_submitted(note_number):
-    df = load_data()
-    memo = df[df["رقم المذكرة"].astype(str).str.strip() == str(note_number).strip()]
-    if memo.empty:
-        return False, ""
-    deposited = str(memo.iloc[0].get("تم الإيداع", "") or "").strip()
-    deposit_date = str(memo.iloc[0].get("تاريخ الإيداع", "") or "").strip()
-    if deposited == "نعم" or deposit_date != "":
-        return True, deposit_date
-    return False, ""
+    try:
+        result = sheets_service.spreadsheets().values().get(
+            spreadsheetId=SPREADSHEET_ID,
+            range="Feuille 1!A1:Z1000"
+        ).execute()
+        values = result.get('values', [])
+        df = pd.DataFrame(values[1:], columns=values[0])
+        memo = df[df["رقم المذكرة"].astype(str).str.strip() == str(note_number).strip()]
+        if memo.empty:
+            return False, None
+        deposit_status = memo.iloc[0]["تم الإيداع"]
+        submission_date = memo.iloc[0]["تاريخ الإيداع"]
+        if (isinstance(deposit_status, str) and deposit_status.strip() == "نعم") or \
+           (isinstance(submission_date, str) and submission_date.strip() != ""):
+            return True, submission_date
+        return False, None
+    except Exception as e:
+        st.error(f"❌ خطأ في التحقق من حالة الإيداع: {e}")
+        return False, None
 
 # --- تحديث حالة الإيداع في Google Sheets ---
 def update_submission_status(note_number):
@@ -86,14 +96,10 @@ def update_submission_status(note_number):
         st.error(f"❌ فشل تحديث حالة الإيداع: {e}")
         return False
 
-# --- رفع ملف PDF إلى Google Drive مع تعديل اسم الملف ---
+# --- رفع ملف PDF إلى Google Drive مع تسمية آمنة ---
 def upload_to_drive(file, note_number):
     try:
-        # تعديل اسم الملف ليتضمن MEMOIRE_N° مع رقم المذكرة واسم الملف الأصلي
-        original_name = file.name
-        extension = original_name.split('.')[-1]
-        new_name = f"MEMOIRE_N°{note_number}.{extension}"
-
+        new_name = f"MEMOIRE_N{note_number}.pdf"
         file_stream = io.BytesIO(file.read())
         media = MediaIoBaseUpload(file_stream, mimetype='application/pdf')
         file_metadata = {
@@ -131,17 +137,16 @@ if not st.session_state.authenticated:
         if not note_number or not password:
             st.warning("⚠️ الرجاء إدخال رقم المذكرة وكلمة السر.")
         else:
-            memo_info = df[df["رقم المذكرة"].astype(str).str.strip() == str(note_number).strip()]
-            if memo_info.empty:
-                st.error("❌ رقم المذكرة غير موجود.")
-            elif memo_info.iloc[0]["كلمة السر"] != password:
-                st.error("❌ كلمة السر غير صحيحة.")
+            # التحقق من حالة الإيداع مسبقًا
+            already_submitted, submission_date = is_already_submitted(note_number)
+            if already_submitted:
+                st.error(f"❌ المذكرة رقم {note_number} تم إيداعها سابقًا بتاريخ: {submission_date}. الرجاء الاتصال بالإدارة لأي استفسار.")
             else:
-                # التحقق من الإيداع السابق
-                already_submitted, submission_date = is_already_submitted(note_number)
-                if already_submitted:
-                    st.error(f"❌ تم إيداع المذكرة سابقًا بتاريخ: {submission_date}\n"
-                             "يرجى الاتصال بالإدارة لأي استفسار.")
+                memo_info = df[df["رقم المذكرة"].astype(str).str.strip() == str(note_number).strip()]
+                if memo_info.empty:
+                    st.error("❌ رقم المذكرة غير موجود.")
+                elif memo_info.iloc[0]["كلمة السر"] != password:
+                    st.error("❌ كلمة السر غير صحيحة.")
                 else:
                     st.session_state.authenticated = True
                     st.session_state.note_number = note_number
