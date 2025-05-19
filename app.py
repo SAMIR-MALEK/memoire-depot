@@ -112,7 +112,6 @@ st.markdown("""
     }
     </style>
 """, unsafe_allow_html=True)
-st.write("📧 إيميل حساب الخدمة:", st.secrets["service_account"]["client_email"])
 
 st.markdown("""
     <div class="header-container">
