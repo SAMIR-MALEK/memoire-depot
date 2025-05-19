@@ -74,12 +74,27 @@ def update_submission_status(note_number):
         st.error(f"❌ فشل تحديث حالة الإيداع: {e}")
         return False
 
+# --- التحقق مما إذا كانت المذكرة مودعة مسبقًا ---
+def is_already_submitted(note_number):
+    df = load_data()
+    memo = df[df["رقم المذكرة"].astype(str).str.strip() == str(note_number).strip()]
+    if memo.empty:
+        return False, ""
+    if memo.iloc[0]["تم الإيداع"].strip() == "نعم" or memo.iloc[0]["تاريخ الإيداع"].strip() != "":
+        return True, memo.iloc[0]["تاريخ الإيداع"]
+    return False, ""
+
 # --- رفع ملف PDF إلى Google Drive ---
-def upload_to_drive(file, filename):
+def upload_to_drive(file, note_number):
     try:
-        file_bytes = file.getvalue()  # يتجنب مشاكل اللغة
+        # قراءة محتوى الملف كـ bytes
+        file_bytes = file.read()
         file_stream = io.BytesIO(file_bytes)
         media = MediaIoBaseUpload(file_stream, mimetype='application/pdf')
+
+        # توليد اسم جديد بدون حروف عربية
+        filename = f"MEMOIRE_N°{note_number}.pdf"
+
         file_metadata = {
             'name': filename,
             'parents': [DRIVE_FOLDER_ID]
@@ -120,12 +135,15 @@ if not st.session_state.authenticated:
                 st.error("❌ رقم المذكرة غير موجود.")
             elif memo_info.iloc[0]["كلمة السر"] != password:
                 st.error("❌ كلمة السر غير صحيحة.")
-            elif memo_info.iloc[0].get("تم الإيداع") == "نعم" or memo_info.iloc[0].get("تاريخ الإيداع"):
-                st.warning("⚠️ تم إيداع هذه المذكرة مسبقًا. لأي تعديل أو استفسار، يرجى التواصل مع الإدارة.")
             else:
-                st.session_state.authenticated = True
-                st.session_state.note_number = note_number
-                st.success("✅ تم التحقق بنجاح، يمكنك رفع المذكرة الآن.")
+                # تحقق من الإيداع السابق
+                already_submitted, submission_date = is_already_submitted(note_number)
+                if already_submitted:
+                    st.error(f"❌ تم إيداع المذكرة سابقًا بتاريخ: {submission_date}. الرجاء الاتصال بالإدارة لأي استفسار.")
+                else:
+                    st.session_state.authenticated = True
+                    st.session_state.note_number = note_number
+                    st.success("✅ تم التحقق بنجاح، يمكنك رفع المذكرة الآن.")
 
 else:
     st.success(f"✅ مرحبًا! رقم المذكرة: {st.session_state.note_number}")
@@ -133,8 +151,7 @@ else:
 
     if uploaded_file and not st.session_state.file_uploaded:
         with st.spinner("⏳ جاري رفع الملف..."):
-            memo_filename = f"MEMOIRE_N°{st.session_state.note_number}.pdf"
-            file_id = upload_to_drive(uploaded_file, memo_filename)
+            file_id = upload_to_drive(uploaded_file, st.session_state.note_number)
             if file_id:
                 updated = update_submission_status(st.session_state.note_number)
                 if updated:
@@ -158,3 +175,10 @@ else:
             file_name="وصل_الإيداع.txt",
             mime="text/plain"
         )
+
+# --- تنفيذ إعادة التهيئة بعد rerun ---
+if st.session_state.get("reset_app"):
+    for key in ["authenticated", "note_number", "file_uploaded", "reset_app"]:
+        if key in st.session_state:
+            del st.session_state[key]
+    st.experimental_rerun()
