@@ -1,11 +1,10 @@
 import streamlit as st
 import pandas as pd
-import gspread
-from google.oauth2.service_account import Credentials
+import io
 from datetime import datetime
+from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
-import io
 
 # --- إعداد الاتصال بـ Google Sheets و Google Drive ---
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets',
@@ -13,8 +12,9 @@ SCOPES = ['https://www.googleapis.com/auth/spreadsheets',
 
 info = st.secrets["service_account"]
 credentials = Credentials.from_service_account_info(info, scopes=SCOPES)
-gc = gspread.authorize(credentials)
+
 drive_service = build('drive', 'v3', credentials=credentials)
+sheets_service = build('sheets', 'v4', credentials=credentials)
 
 # --- معرف الشيت ومجلد الدرايف ---
 SPREADSHEET_ID = "1Ycx-bUscF7rEpse4B5lC4xCszYLZ8uJyPJLp6bFK8zo"
@@ -24,29 +24,51 @@ DRIVE_FOLDER_ID = "1TfhvUA9oqvSlj9TuLjkyHi5xsC5svY1D"
 @st.cache_data(ttl=300)
 def load_data():
     try:
-        sheet = gc.open_by_key(SPREADSHEET_ID).worksheet("Feuille 1")
-        data = sheet.get_all_records()
-        df = pd.DataFrame(data)
-        return df, sheet
+        result = sheets_service.spreadsheets().values().get(
+            spreadsheetId=SPREADSHEET_ID,
+            range="Feuille 1!A1:Z1000"
+        ).execute()
+        values = result.get('values', [])
+        if not values:
+            st.error("❌ لا توجد بيانات في الشيت.")
+            st.stop()
+        df = pd.DataFrame(values[1:], columns=values[0])
+        return df
     except Exception as e:
         st.error(f"❌ خطأ في تحميل البيانات من Google Sheets: {e}")
         st.stop()
 
 # --- تحديث حالة الإيداع في Google Sheets ---
-def update_submission_status(worksheet, note_number):
+def update_submission_status(note_number):
     try:
-        df = pd.DataFrame(worksheet.get_all_records())
+        result = sheets_service.spreadsheets().values().get(
+            spreadsheetId=SPREADSHEET_ID,
+            range="Feuille 1!A1:Z1000"
+        ).execute()
+        values = result.get('values', [])
+        df = pd.DataFrame(values[1:], columns=values[0])
+
         row_idx = df[df["رقم المذكرة"].astype(str).str.strip() == str(note_number).strip()].index
         if row_idx.empty:
             st.error("❌ رقم المذكرة غير موجود في الشيت أثناء التحديث.")
             return False
-        idx = row_idx[0] + 2  # الصفوف في Sheets تبدأ من 1 + صف العنوان
 
-        col_deposit = df.columns.get_loc("تم الإيداع") + 1
-        col_date = df.columns.get_loc("تاريخ الإيداع") + 1
+        idx = row_idx[0] + 2
+        col_names = df.columns.tolist()
+        deposit_col = col_names.index("تم الإيداع") + 1
+        date_col = col_names.index("تاريخ الإيداع") + 1
 
-        worksheet.update_cell(idx, col_deposit, "نعم")
-        worksheet.update_cell(idx, col_date, datetime.now().strftime("%Y-%m-%d %H:%M"))
+        updates = {
+            "valueInputOption": "USER_ENTERED",
+            "data": [
+                {"range": f"Feuille 1!{chr(64+deposit_col)}{idx}", "values": [["نعم"]]},
+                {"range": f"Feuille 1!{chr(64+date_col)}{idx}", "values": [[datetime.now().strftime("%Y-%m-%d %H:%M")]]},
+            ]
+        }
+        sheets_service.spreadsheets().values().batchUpdate(
+            spreadsheetId=SPREADSHEET_ID,
+            body=updates
+        ).execute()
         return True
     except Exception as e:
         st.error(f"❌ فشل تحديث حالة الإيداع: {e}")
@@ -67,7 +89,7 @@ def upload_to_drive(file, filename):
         st.error(f"❌ خطأ في رفع الملف إلى Google Drive: {e}")
         return None
 
-# --- تهيئة الصفحة ---
+# --- واجهة Streamlit ---
 st.set_page_config(page_title="إيداع مذكرات التخرج", page_icon="📥", layout="centered")
 
 st.markdown("<h1 style='text-align:center; color:#4B8BBE;'>📥 منصة إيداع مذكرات التخرج</h1>", unsafe_allow_html=True)
@@ -75,7 +97,7 @@ st.markdown("<p style='text-align:center; font-size:18px;'>جامعة برج ب�
 st.markdown("---")
 
 # --- تحميل بيانات الطلبة ---
-df, worksheet = load_data()
+df = load_data()
 
 # --- إدارة حالة الجلسة ---
 if "authenticated" not in st.session_state:
@@ -110,7 +132,7 @@ else:
         with st.spinner("⏳ جاري رفع الملف..."):
             file_id = upload_to_drive(uploaded_file, uploaded_file.name)
             if file_id:
-                updated = update_submission_status(worksheet, st.session_state.note_number)
+                updated = update_submission_status(st.session_state.note_number)
                 if updated:
                     st.success("✅ تم إيداع المذكرة وتحديث الحالة بنجاح!")
                     st.markdown(f"📎 معرف الملف على Drive: `{file_id}`")
@@ -123,9 +145,8 @@ else:
     elif st.session_state.file_uploaded:
         st.info("📌 تم رفع الملف وتحديث الحالة مسبقًا.")
 
-    # --- زر إنهاء مع إعادة تشغيل آمنة ---
-if st.button("🔄 إنهاء", key="btn_reset"):
-    keys_to_delete = [key for key in st.session_state.keys() if not key.startswith("_")]
-    for key in keys_to_delete:
-        del st.session_state[key]
-    st.experimental_rerun()
+    if st.button("🔄 إنهاء", key="btn_reset"):
+        keys_to_delete = [key for key in st.session_state.keys() if not key.startswith("_")]
+        for key in keys_to_delete:
+            del st.session_state[key]
+        st.experimental_rerun()
