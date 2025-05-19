@@ -77,7 +77,8 @@ def update_submission_status(note_number):
 # --- رفع ملف PDF إلى Google Drive ---
 def upload_to_drive(file, filename):
     try:
-        file_stream = io.BytesIO(file.read())
+        file_bytes = file.getvalue()  # يتجنب مشاكل اللغة
+        file_stream = io.BytesIO(file_bytes)
         media = MediaIoBaseUpload(file_stream, mimetype='application/pdf')
         file_metadata = {
             'name': filename,
@@ -119,6 +120,8 @@ if not st.session_state.authenticated:
                 st.error("❌ رقم المذكرة غير موجود.")
             elif memo_info.iloc[0]["كلمة السر"] != password:
                 st.error("❌ كلمة السر غير صحيحة.")
+            elif memo_info.iloc[0].get("تم الإيداع") == "نعم" or memo_info.iloc[0].get("تاريخ الإيداع"):
+                st.warning("⚠️ تم إيداع هذه المذكرة مسبقًا. لأي تعديل أو استفسار، يرجى التواصل مع الإدارة.")
             else:
                 st.session_state.authenticated = True
                 st.session_state.note_number = note_number
@@ -130,7 +133,8 @@ else:
 
     if uploaded_file and not st.session_state.file_uploaded:
         with st.spinner("⏳ جاري رفع الملف..."):
-            file_id = upload_to_drive(uploaded_file, uploaded_file.name)
+            memo_filename = f"MEMOIRE_N°{st.session_state.note_number}.pdf"
+            file_id = upload_to_drive(uploaded_file, memo_filename)
             if file_id:
                 updated = update_submission_status(st.session_state.note_number)
                 if updated:
@@ -154,11 +158,3 @@ else:
             file_name="وصل_الإيداع.txt",
             mime="text/plain"
         )
-
-
-# --- تنفيذ إعادة التهيئة بعد rerun ---
-if st.session_state.get("reset_app"):
-    for key in ["authenticated", "note_number", "file_uploaded", "reset_app"]:
-        if key in st.session_state:
-            del st.session_state[key]
-    st.experimental_rerun()
