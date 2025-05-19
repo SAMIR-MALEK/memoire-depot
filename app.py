@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import os
-from datetime import datetime
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
@@ -49,18 +48,6 @@ def upload_to_drive(file_path, file_name, service):
     media = MediaFileUpload(file_path, mimetype='application/pdf')
     uploaded = service.files().create(body=file_metadata, media_body=media, fields='id').execute()
     return uploaded.get('id')
-
-def update_deposit_status(note_number):
-    df = pd.read_excel("حالة تسجيل المذكرات.xlsx")
-    df.columns = df.columns.str.strip()
-    idx = df.index[df['رقم المذكرة'].astype(str).str.strip() == str(note_number).strip()]
-    if not idx.empty:
-        idx = idx[0]
-        df.at[idx, 'تم الإيداع'] = 'نعم'
-        df.at[idx, 'تاريخ الإيداع'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        df.to_excel("حالة تسجيل المذكرات.xlsx", index=False)
-        return True
-    return False
 
 for key in ["step", "validated", "upload_success", "file_id", "memo_info"]:
     if key not in st.session_state:
@@ -173,12 +160,6 @@ elif st.session_state.step == "upload" and not st.session_state.upload_success:
             with st.spinner("🚀 جاري رفع الملف إلى Google Drive..."):
                 service = get_drive_service()
                 file_id = upload_to_drive(temp_path, f"Memoire_{memo_info['رقم المذكرة']}.pdf", service)
-            updated = update_deposit_status(memo_info['رقم المذكرة'])
-            if updated:
-                st.success("✅ تم تحديث حالة الإيداع في الملف بنجاح.")
-            else:
-                st.warning("⚠️ لم يتم تحديث حالة الإيداع في الملف (المذكرة غير موجودة).")
-
             st.session_state.upload_success = True
             st.session_state.file_id = file_id
         except Exception as e:
@@ -191,6 +172,10 @@ if st.session_state.upload_success:
     st.success("✅ تم إيداع المذكرة بنجاح!")
     st.info(f"📎 معرف الملف على Drive: {st.session_state.file_id}")
     if st.button("⬅️ إنهاء"):
-        for key in ["step", "validated", "upload_success", "file_id", "memo_info"]:
-            st.session_state[key] = None if key == "memo_info" else False if key in ["validated", "upload_success"] else "login"
+        # إعادة تعيين قيم الحالة بدون حذف المفاتيح
+        st.session_state.step = "login"
+        st.session_state.validated = False
+        st.session_state.upload_success = False
+        st.session_state.file_id = None
+        st.session_state.memo_info = None
         st.experimental_rerun()
