@@ -145,9 +145,10 @@ else:
     elif st.session_state.file_uploaded:
         st.info("📌 تم رفع الملف وتحديث الحالة مسبقًا.")
 
-    if st.button("🔄 إنهاء", key="btn_reset"):
-        st.session_state.reset_app = True
-        st.experimental_rerun()
+elif st.session_state.file_uploaded:
+    st.success("✅ تم رفع الملف وتحديث حالة الإيداع بنجاح.")
+    st.info("📌 لا حاجة لأي خطوة إضافية. يمكنك إغلاق الصفحة أو حفظ هذا الوصل كدليل.")
+    # يمكن توليد وصل أو عرض تفاصيل هنا
 
 # --- تنفيذ إعادة التهيئة بعد rerun ---
 if st.session_state.get("reset_app"):
