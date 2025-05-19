@@ -86,11 +86,15 @@ def is_already_submitted(note_number):
         memo = df[df["رقم المذكرة"].astype(str).str.strip() == str(note_number).strip()]
         if memo.empty:
             return False, None
-        deposited = str(memo.iloc[0]["تم الإيداع"]).strip()
-        date = str(memo.iloc[0]["تاريخ الإيداع"]).strip()
-        if deposited == "نعم" or date != "":
-            return True, date
-        return False, None
+
+        deposited = str(memo.iloc[0].get("تم الإيداع", "")).strip()
+        date = str(memo.iloc[0].get("تاريخ الإيداع", "")).strip()
+
+        if (deposited == "نعم") or (date != "" and date.lower() != "nan"):
+            return True, date if date else "غير محدد"
+        else:
+            return False, None
+
     except Exception as e:
         st.error(f"❌ خطأ في التحقق من حالة الإيداع: {e}")
         return False, None
