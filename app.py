@@ -125,8 +125,7 @@ else:
 
     # --- زر إنهاء مع إعادة تشغيل آمنة ---
     if st.button("🔄 إنهاء", key="btn_reset"):
-        st.session_state["reset_triggered"] = True
-
-    if st.session_state.get("reset_triggered", False):
-        st.session_state.clear()
-        st.experimental_rerun()
+    keys_to_delete = [key for key in st.session_state.keys() if not key.startswith("_")]
+    for key in keys_to_delete:
+        del st.session_state[key]
+    st.experimental_rerun()
