@@ -85,7 +85,7 @@ def update_submission_status(note_number):
             "valueInputOption": "USER_ENTERED",
             "data": [
                 {"range": f"Feuille 1!{chr(64+deposit_col)}{idx}", "values": [["نعم"]]},
-                {"range": f"Feuille 1!{chr(64+date_col)}{idx}", "values": [[datetime.now().strftime("%Y-%m-%d %H:%M")]]},
+                {"range": f"Feuille 1!{chr(64+date_col)}{idx}", "values": [[datetime.now().strftime('%Y-%m-%d %H:%M')]]},
             ]
         }
         sheets_service.spreadsheets().values().batchUpdate(
@@ -98,15 +98,15 @@ def update_submission_status(note_number):
         return False
 
 # --- رفع ملف PDF إلى Google Drive مع تسمية آمنة ---
+def sanitize_text(text):
+    # تحويل كل شيء إلى حروف وأرقام إنجليزية فقط باستبدال غيرها بـ _
+    return re.sub(r'[^A-Za-z0-9]+', '_', text)
+
 def upload_to_drive(file, note_number):
     try:
-        # دالة لتنظيف اسم الملف من الحروف غير المدعومة
-        def sanitize_text(text):
-            return re.sub(r'[^A-Za-z0-9]', '_', text)
-        
         new_name = f"MEMOIRE_N{sanitize_text(str(note_number))}.pdf"
-        file_stream = io.BytesIO(file.read())
-        media = MediaIoBaseUpload(file_stream, mimetype='application/pdf')
+        file.seek(0)
+        media = MediaIoBaseUpload(file, mimetype='application/pdf', resumable=True)
         file_metadata = {
             'name': new_name,
             'parents': [DRIVE_FOLDER_ID]
