@@ -101,23 +101,35 @@ def update_submission_status(note_number):
 # --- رفع ملف PDF إلى Google Drive مع ملف مؤقت واسم آمن ---
 def sanitize_text(text):
     return re.sub(r'[^A-Za-z0-9]+', '_', text)
+from io import BytesIO
 
-def upload_to_drive(file, note_number):
+def upload_to_drive(uploaded_file, note_number):
     try:
-        new_name = f"MEMOIRE_N{sanitize_text(str(note_number))}.pdf"
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
-            tmp.write(file.read())
-            tmp.seek(0)
-            media = MediaIoBaseUpload(tmp, mimetype='application/pdf', resumable=True)
-            file_metadata = {
-                'name': new_name,
-                'parents': [DRIVE_FOLDER_ID]
-            }
-            uploaded = drive_service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+        # توليد اسم آمن للملف
+        safe_name = f"MEMOIRE_N{sanitize_text(str(note_number))}.pdf"
+        
+        # قراءة الملف كـ BytesIO
+        file_bytes = uploaded_file.getbuffer()
+        file_stream = BytesIO(file_bytes)
+
+        media = MediaIoBaseUpload(file_stream, mimetype='application/pdf', resumable=True)
+        file_metadata = {
+            'name': safe_name,
+            'parents': [DRIVE_FOLDER_ID]
+        }
+
+        uploaded = drive_service.files().create(
+            body=file_metadata,
+            media_body=media,
+            fields='id'
+        ).execute()
+
         return uploaded.get('id')
+
     except Exception as e:
-        st.error(f"❌ خطأ في رفع الملف إلى Google Drive: {e}")
+        st.error(f"❌ خطأ في رفع الملف إلى Google Drive (getbuffer): {e}")
         return None
+
 
 # --- واجهة Streamlit ---
 st.set_page_config(page_title="إيداع مذكرات التخرج", page_icon="📥", layout="centered")
