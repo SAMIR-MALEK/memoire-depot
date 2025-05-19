@@ -13,6 +13,7 @@ SCOPES = ['https://www.googleapis.com/auth/drive.file']
 @st.cache_data
 def load_data():
     df = pd.read_excel("حالة تسجيل المذكرات.xlsx")
+    st.write("أسماء الأعمدة في ملف الإكسل:", df.columns.tolist())  # هذا السطر للتأكد فقط
     df.columns = df.columns.str.strip()
     df = df.astype(str)
     return df
