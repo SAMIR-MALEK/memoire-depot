@@ -110,19 +110,26 @@ if st.session_state.step == "login":
     password = st.text_input('كلمة السر', type='password', key="pass_input")
 
     if st.button("✅ تأكيد"):
-        df = load_data()
-        df['رقم المذكرة'] = df['رقم المذكرة'].str.strip()
-        df['كلمة السر'] = df['كلمة السر'].str.strip()
+    df = load_data()
+    df['رقم المذكرة'] = df['رقم المذكرة'].str.strip()
+    df['كلمة السر'] = df['كلمة السر'].str.strip()
+    df['تم الإيداع'] = df['تم الإيداع'].fillna("").str.strip().str.lower()
+    df['تاريخ الإيداع'] = df['تاريخ الإيداع'].fillna("")
 
-        note = note_number.strip().lower()
-        pw = password.strip().lower()
+    note = note_number.strip().lower()
+    pw = password.strip().lower()
 
-        match = df[(df['رقم المذكرة'].str.lower() == note) & (df['كلمة السر'].str.lower() == pw)]
-        if not match.empty:
+    match = df[(df['رقم المذكرة'].str.lower() == note) & (df['كلمة السر'].str.lower() == pw)]
+
+    if not match.empty:
+        if match.iloc[0].get('تم الإيداع', '') == 'نعم':
+            deposit_date = match.iloc[0].get('تاريخ الإيداع', 'غير محدد')
+            st.warning(f"⚠️ لقد تم إيداع هذه المذكرة مسبقًا بتاريخ **{deposit_date}**.\n\nإذا كنت ترى أن هناك خطأ، يرجى التواصل مع الإدارة.")
+        else:
             st.session_state.memo_info = match.iloc[0]
             st.session_state.step = "upload"
-        else:
-            st.error("❌ رقم المذكرة أو كلمة السر غير صحيحة. يرجى التحقق والمحاولة مجددًا.")
+    else:
+        st.error("❌ رقم المذكرة أو كلمة السر غير صحيحة. يرجى التحقق والمحاولة مجددًا.")
 
 # ======================== الخطوة الثانية =========================
 elif st.session_state.step == "upload" and not st.session_state.upload_success:
