@@ -38,6 +38,18 @@ def load_data():
         st.error(f"❌ خطأ في تحميل البيانات من Google Sheets: {e}")
         st.stop()
 
+# --- التحقق من وجود إيداع سابق ---
+def is_already_submitted(note_number):
+    df = load_data()
+    memo = df[df["رقم المذكرة"].astype(str).str.strip() == str(note_number).strip()]
+    if memo.empty:
+        return False, ""
+    deposited = str(memo.iloc[0].get("تم الإيداع", "") or "").strip()
+    deposit_date = str(memo.iloc[0].get("تاريخ الإيداع", "") or "").strip()
+    if deposited == "نعم" or deposit_date != "":
+        return True, deposit_date
+    return False, ""
+
 # --- تحديث حالة الإيداع في Google Sheets ---
 def update_submission_status(note_number):
     try:
@@ -74,29 +86,18 @@ def update_submission_status(note_number):
         st.error(f"❌ فشل تحديث حالة الإيداع: {e}")
         return False
 
-# --- التحقق مما إذا كانت المذكرة مودعة مسبقًا ---
-def is_already_submitted(note_number):
-    df = load_data()
-    memo = df[df["رقم المذكرة"].astype(str).str.strip() == str(note_number).strip()]
-    if memo.empty:
-        return False, ""
-    if memo.iloc[0]["تم الإيداع"].strip() == "نعم" or memo.iloc[0]["تاريخ الإيداع"].strip() != "":
-        return True, memo.iloc[0]["تاريخ الإيداع"]
-    return False, ""
-
-# --- رفع ملف PDF إلى Google Drive ---
+# --- رفع ملف PDF إلى Google Drive مع تعديل اسم الملف ---
 def upload_to_drive(file, note_number):
     try:
-        # قراءة محتوى الملف كـ bytes
-        file_bytes = file.read()
-        file_stream = io.BytesIO(file_bytes)
+        # تعديل اسم الملف ليتضمن MEMOIRE_N° مع رقم المذكرة واسم الملف الأصلي
+        original_name = file.name
+        extension = original_name.split('.')[-1]
+        new_name = f"MEMOIRE_N°{note_number}.{extension}"
+
+        file_stream = io.BytesIO(file.read())
         media = MediaIoBaseUpload(file_stream, mimetype='application/pdf')
-
-        # توليد اسم جديد بدون حروف عربية
-        filename = f"MEMOIRE_N°{note_number}.pdf"
-
         file_metadata = {
-            'name': filename,
+            'name': new_name,
             'parents': [DRIVE_FOLDER_ID]
         }
         uploaded = drive_service.files().create(body=file_metadata, media_body=media, fields='id').execute()
@@ -136,10 +137,11 @@ if not st.session_state.authenticated:
             elif memo_info.iloc[0]["كلمة السر"] != password:
                 st.error("❌ كلمة السر غير صحيحة.")
             else:
-                # تحقق من الإيداع السابق
+                # التحقق من الإيداع السابق
                 already_submitted, submission_date = is_already_submitted(note_number)
                 if already_submitted:
-                    st.error(f"❌ تم إيداع المذكرة سابقًا بتاريخ: {submission_date}. الرجاء الاتصال بالإدارة لأي استفسار.")
+                    st.error(f"❌ تم إيداع المذكرة سابقًا بتاريخ: {submission_date}\n"
+                             "يرجى الاتصال بالإدارة لأي استفسار.")
                 else:
                     st.session_state.authenticated = True
                     st.session_state.note_number = note_number
