@@ -109,7 +109,7 @@ if st.session_state.step == "login":
     note_number = st.text_input('رقم المذكرة', key="note_input")
     password = st.text_input('كلمة السر', type='password', key="pass_input")
 
-    if st.button("✅ تأكيد"):
+if st.button("✅ تأكيد"):
     df = load_data()
     df['رقم المذكرة'] = df['رقم المذكرة'].str.strip()
     df['كلمة السر'] = df['كلمة السر'].str.strip()
@@ -130,6 +130,7 @@ if st.session_state.step == "login":
             st.session_state.step = "upload"
     else:
         st.error("❌ رقم المذكرة أو كلمة السر غير صحيحة. يرجى التحقق والمحاولة مجددًا.")
+
 
 # ======================== الخطوة الثانية =========================
 elif st.session_state.step == "upload" and not st.session_state.upload_success:
