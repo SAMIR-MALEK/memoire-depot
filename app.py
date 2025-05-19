@@ -6,119 +6,159 @@ from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
 
-# إعداد الصفحة
-st.set_page_config(page_title="منصة إيداع المذكرات", page_icon="📚", layout="centered")
-
-# إعدادات Google
-SCOPES = ['https://www.googleapis.com/auth/drive', 'https://www.googleapis.com/auth/spreadsheets']
-SPREADSHEET_ID = "1Ycx-bUscF7rEpse4B5lC4xCszYLZ8uJyPJLp6bFK8zo"
-DRIVE_FOLDER_ID = "1TfhvUA9oqvSlj9TuLjkyHi5xsC5svY1D"
+# --- إعداد الاتصال بـ Google Sheets و Google Drive ---
+SCOPES = ['https://www.googleapis.com/auth/spreadsheets',
+          'https://www.googleapis.com/auth/drive']
 
 info = st.secrets["service_account"]
 credentials = Credentials.from_service_account_info(info, scopes=SCOPES)
-gc = build('sheets', 'v4', credentials=credentials)
-drive_service = build('drive', 'v3', credentials=credentials)
 
-# استدعاء بيانات من Google Sheets
+drive_service = build('drive', 'v3', credentials=credentials)
+sheets_service = build('sheets', 'v4', credentials=credentials)
+
+# --- معرف الشيت ومجلد الدرايف ---
+SPREADSHEET_ID = "1Ycx-bUscF7rEpse4B5lC4xCszYLZ8uJyPJLp6bFK8zo"
+DRIVE_FOLDER_ID = "1TfhvUA9oqvSlj9TuLjkyHi5xsC5svY1D"
+
+# --- تحميل البيانات من Google Sheets ---
 @st.cache_data(ttl=300)
 def load_data():
-    sheet = gc.spreadsheets()
-    result = sheet.values().get(spreadsheetId=SPREADSHEET_ID, range="Feuille 1").execute()
-    values = result.get('values', [])
-    if not values:
-        return pd.DataFrame()
-    df = pd.DataFrame(values[1:], columns=values[0])
-    return df
+    try:
+        result = sheets_service.spreadsheets().values().get(
+            spreadsheetId=SPREADSHEET_ID,
+            range="Feuille 1!A1:Z1000"
+        ).execute()
+        values = result.get('values', [])
+        if not values:
+            st.error("❌ لا توجد بيانات في الشيت.")
+            st.stop()
+        df = pd.DataFrame(values[1:], columns=values[0])
+        return df
+    except Exception as e:
+        st.error(f"❌ خطأ في تحميل البيانات من Google Sheets: {e}")
+        st.stop()
 
-# رفع ملف إلى Google Drive
+# --- تحديث حالة الإيداع في Google Sheets ---
+def update_submission_status(note_number):
+    try:
+        result = sheets_service.spreadsheets().values().get(
+            spreadsheetId=SPREADSHEET_ID,
+            range="Feuille 1!A1:Z1000"
+        ).execute()
+        values = result.get('values', [])
+        df = pd.DataFrame(values[1:], columns=values[0])
+
+        row_idx = df[df["رقم المذكرة"].astype(str).str.strip() == str(note_number).strip()].index
+        if row_idx.empty:
+            st.error("❌ رقم المذكرة غير موجود في الشيت أثناء التحديث.")
+            return False
+
+        idx = row_idx[0] + 2
+        col_names = df.columns.tolist()
+        deposit_col = col_names.index("تم الإيداع") + 1
+        date_col = col_names.index("تاريخ الإيداع") + 1
+
+        updates = {
+            "valueInputOption": "USER_ENTERED",
+            "data": [
+                {"range": f"Feuille 1!{chr(64+deposit_col)}{idx}", "values": [["نعم"]]},
+                {"range": f"Feuille 1!{chr(64+date_col)}{idx}", "values": [[datetime.now().strftime("%Y-%m-%d %H:%M")]]},
+            ]
+        }
+        sheets_service.spreadsheets().values().batchUpdate(
+            spreadsheetId=SPREADSHEET_ID,
+            body=updates
+        ).execute()
+        return True
+    except Exception as e:
+        st.error(f"❌ فشل تحديث حالة الإيداع: {e}")
+        return False
+
+# --- رفع ملف PDF إلى Google Drive ---
 def upload_to_drive(file, filename):
-    file_stream = io.BytesIO(file.read())
-    media = MediaIoBaseUpload(file_stream, mimetype='application/pdf')
-    metadata = {'name': filename, 'parents': [DRIVE_FOLDER_ID]}
-    file = drive_service.files().create(body=metadata, media_body=media, fields='id').execute()
-    return file.get('id')
+    try:
+        file_stream = io.BytesIO(file.read())
+        media = MediaIoBaseUpload(file_stream, mimetype='application/pdf')
+        file_metadata = {
+            'name': filename,
+            'parents': [DRIVE_FOLDER_ID]
+        }
+        uploaded = drive_service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+        return uploaded.get('id')
+    except Exception as e:
+        st.error(f"❌ خطأ في رفع الملف إلى Google Drive: {e}")
+        return None
 
-# تحديث حالة الإيداع في Google Sheets
-def update_status(note_number):
-    # هذه وظيفة تجريبية — يمكنك تطويرها حسب هيكلة الشيت لديك
-    pass
+# --- واجهة Streamlit ---
+st.set_page_config(page_title="إيداع مذكرات التخرج", page_icon="📥", layout="centered")
 
-# --- تصميم CSS لتحسين الشكل ---
-st.markdown("""
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Cairo&display=swap');
-    html, body, [class*="css"]  {
-        font-family: 'Cairo', sans-serif;
-    }
-    .header {
-        text-align: center;
-        color: #007ACC;
-        margin-bottom: 20px;
-    }
-    .success-box {
-        background-color: #d4edda;
-        border: 1px solid #c3e6cb;
-        padding: 15px;
-        border-radius: 8px;
-        margin-top: 20px;
-    }
-    </style>
-""", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align:center; color:#4B8BBE;'>📥 منصة إيداع مذكرات التخرج</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center; font-size:18px;'>جامعة برج بوعريريج</p>", unsafe_allow_html=True)
+st.markdown("---")
 
-st.markdown('<h1 class="header">📚 منصة إيداع مذكرات التخرج</h1>', unsafe_allow_html=True)
-
-# ---- حالة الجلسة ----
-if "step" not in st.session_state:
-    st.session_state.step = "login"
-if "note_number" not in st.session_state:
-    st.session_state.note_number = ""
-if "uploaded" not in st.session_state:
-    st.session_state.uploaded = False
-if "file_id" not in st.session_state:
-    st.session_state.file_id = ""
-
+# --- تحميل بيانات الطلبة ---
 df = load_data()
 
-# --- صفحة تسجيل الدخول ---
-if st.session_state.step == "login":
-    note_number = st.text_input("🔢 رقم المذكرة")
-    password = st.text_input("🔐 كلمة السر", type="password")
-    if st.button("✅ تحقق"):
-        if note_number.strip() == "" or password.strip() == "":
+# --- إدارة حالة الجلسة ---
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+if "file_uploaded" not in st.session_state:
+    st.session_state.file_uploaded = False
+
+# --- واجهة التحقق ---
+if not st.session_state.authenticated:
+    note_number = st.text_input("🔢 أدخل رقم المذكرة:", key="note_input")
+    password = st.text_input("🔐 أدخل كلمة السر:", type="password", key="pass_input")
+
+    if st.button("✅ تحقق", key="btn_check"):
+        if not note_number or not password:
             st.warning("⚠️ الرجاء إدخال رقم المذكرة وكلمة السر.")
         else:
-            matched = df[(df["رقم المذكرة"].astype(str).str.strip() == note_number.strip()) & 
-                         (df["كلمة السر"].astype(str).str.strip() == password.strip())]
-            if matched.empty:
-                st.error("❌ رقم المذكرة أو كلمة السر غير صحيحة.")
+            memo_info = df[df["رقم المذكرة"].astype(str).str.strip() == str(note_number).strip()]
+            if memo_info.empty:
+                st.error("❌ رقم المذكرة غير موجود.")
+            elif memo_info.iloc[0]["كلمة السر"] != password:
+                st.error("❌ كلمة السر غير صحيحة.")
             else:
-                st.session_state.note_number = note_number.strip()
-                st.session_state.step = "upload"
-                st.experimental_rerun()
+                st.session_state.authenticated = True
+                st.session_state.note_number = note_number
+                st.success("✅ تم التحقق بنجاح، يمكنك رفع المذكرة الآن.")
 
-# --- صفحة رفع الملف ---
-elif st.session_state.step == "upload" and not st.session_state.uploaded:
+else:
     st.success(f"✅ مرحبًا! رقم المذكرة: {st.session_state.note_number}")
-    uploaded_file = st.file_uploader("📤 رفع ملف المذكرة (PDF فقط)", type="pdf")
+    uploaded_file = st.file_uploader("📤 رفع ملف المذكرة (PDF فقط)", type="pdf", key="file_uploader")
 
-    if uploaded_file:
+    if uploaded_file and not st.session_state.file_uploaded:
         with st.spinner("⏳ جاري رفع الملف..."):
-            file_id = upload_to_drive(uploaded_file, f"Memoire_{st.session_state.note_number}.pdf")
+            file_id = upload_to_drive(uploaded_file, uploaded_file.name)
             if file_id:
-                # تحديث حالة الإيداع في الشيت (يمكنك تفعيل هذا الجزء)
-                # update_status(st.session_state.note_number)
-                st.session_state.uploaded = True
-                st.session_state.file_id = file_id
-                st.experimental_rerun()
+                updated = update_submission_status(st.session_state.note_number)
+                if updated:
+                    st.success("✅ تم إيداع المذكرة وتحديث الحالة بنجاح!")
+                    st.markdown(f"📎 معرف الملف على Drive: `{file_id}`")
+                    st.session_state.file_uploaded = True
+                else:
+                    st.error("❌ فشل تحديث حالة الإيداع في الشيت.")
             else:
                 st.error("❌ فشل رفع الملف.")
 
-# --- صفحة النجاح ---
-elif st.session_state.uploaded:
-    st.markdown(f'<div class="success-box">✅ تم إيداع المذكرة بنجاح!<br>📎 معرف الملف على Drive: <code>{st.session_state.file_id}</code></div>', unsafe_allow_html=True)
-    if st.button("⬅️ إنهاء"):
-        st.session_state.step = "login"
-        st.session_state.note_number = ""
-        st.session_state.uploaded = False
-        st.session_state.file_id = ""
-        st.experimental_rerun()
+    elif st.session_state.file_uploaded:
+        st.info("📌 تم رفع الملف وتحديث الحالة مسبقًا.")
+
+    if st.session_state.file_uploaded:
+        st.success("✅ تم رفع الملف وتحديث حالة الإيداع بنجاح.")
+        st.info("📌 لا حاجة لأي خطوة إضافية. يمكنك الآن إغلاق الصفحة أو تحميل وصل الإيداع.")
+        st.download_button(
+            label="📄 تحميل وصل الإيداع",
+            data=f"وصل تأكيد إيداع\nرقم المذكرة: {st.session_state.note_number}\nتاريخ الإيداع: {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+            file_name="وصل_الإيداع.txt",
+            mime="text/plain"
+        )
+
+
+# --- تنفيذ إعادة التهيئة بعد rerun ---
+if st.session_state.get("reset_app"):
+    for key in ["authenticated", "note_number", "file_uploaded", "reset_app"]:
+        if key in st.session_state:
+            del st.session_state[key]
+    st.experimental_rerun()
