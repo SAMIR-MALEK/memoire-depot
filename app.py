@@ -146,7 +146,12 @@ else:
         st.info("📌 تم رفع الملف وتحديث الحالة مسبقًا.")
 
     if st.button("🔄 إنهاء", key="btn_reset"):
-        keys_to_delete = [key for key in st.session_state.keys() if not key.startswith("_")]
-        for key in keys_to_delete:
-            del st.session_state[key]
+        st.session_state.reset_app = True
         st.experimental_rerun()
+
+# --- تنفيذ إعادة التهيئة بعد rerun ---
+if st.session_state.get("reset_app"):
+    for key in ["authenticated", "note_number", "file_uploaded", "reset_app"]:
+        if key in st.session_state:
+            del st.session_state[key]
+    st.experimental_rerun()
