@@ -7,22 +7,19 @@ from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 
-# --- إعداد الاتصال بـ Google Sheets و Google Drive ---
+# --- إعداد Google API كما في الكود السابق ---
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets',
           'https://www.googleapis.com/auth/drive']
 
 info = st.secrets["service_account"]
 credentials = Credentials.from_service_account_info(info, scopes=SCOPES)
 
-
 drive_service = build('drive', 'v3', credentials=credentials)
 sheets_service = build('sheets', 'v4', credentials=credentials)
 
-# --- معرف الشيت ومجلد الدرايف ---
 SPREADSHEET_ID = "1Ycx-bUscF7rEpse4B5lC4xCszYLZ8uJyPJLp6bFK8zo"
 DRIVE_FOLDER_ID = "1TfhvUA9oqvSlj9TuLjkyHi5xsC5svY1D"
 
-# --- تحميل البيانات من Google Sheets ---
 @st.cache_data(ttl=300)
 def load_data():
     try:
@@ -40,7 +37,6 @@ def load_data():
         st.error(f"❌ خطأ في تحميل البيانات من Google Sheets: {e}")
         st.stop()
 
-# --- التحقق مما إذا تم الإيداع مسبقًا ---
 def is_already_submitted(note_number):
     try:
         result = sheets_service.spreadsheets().values().get(
@@ -62,7 +58,6 @@ def is_already_submitted(note_number):
         st.error(f"❌ خطأ في التحقق من حالة الإيداع: {e}")
         return False, None
 
-# --- تحديث حالة الإيداع في Google Sheets ---
 def update_submission_status(note_number):
     try:
         result = sheets_service.spreadsheets().values().get(
@@ -98,7 +93,6 @@ def update_submission_status(note_number):
         st.error(f"❌ فشل تحديث حالة الإيداع: {e}")
         return False
 
-# --- رفع ملف PDF إلى Google Drive باسم memoire_رقم_المذكرة ---
 def upload_to_drive(filepath, note_number):
     try:
         new_name = f"memoire_{note_number}.pdf"
@@ -117,126 +111,137 @@ def upload_to_drive(filepath, note_number):
         st.error(f"❌ خطأ في رفع الملف إلى Google Drive: {e}")
         return None
 
-# --- إعداد التصميم العام ---
 st.set_page_config(page_title="إيداع مذكرات التخرج", layout="centered")
 
+# --- CSS شامل للصفحة ---
 st.markdown("""
     <style>
-    body {
+    body, .main {
         background-color: white !important;
     }
+    /* الصندوق الأزرق */
     .app-window {
-        background-color: #0b1a35;
-        color: white;
+        background-color: #0b1a35 !important;
+        color: white !important;
         max-width: 450px;
-        margin: 3rem auto;
-        padding: 2rem 3rem;
+        margin: 3rem auto 4rem auto;
+        padding: 2rem 2.5rem 3rem 2.5rem;
         border-radius: 16px;
         box-shadow: 0 0 15px rgba(0,0,0,0.3);
     }
+    /* العناوين */
     .app-window h1, .app-window h2, .app-window h3, .app-window p {
-        color: gold;
+        color: gold !important;
         text-align: center;
         margin-bottom: 1rem;
     }
-    .app-window .stTextInput input,
-    .app-window .stTextArea textarea,
-    .app-window .stFileUploader,
+    /* الحقول وأزرار رفع الملفات */
+    .app-window .stTextInput > div > input,
+    .app-window .stTextArea > div > textarea,
+    .app-window .stFileUploader > div > label,
+    .app-window .stFileUploader > div > input,
     .app-window .stButton > button {
-        background-color: #1f2f4a;
-        color: white;
-        border-radius: 8px;
-        border: none;
+        background-color: #1f2f4a !important;
+        color: white !important;
+        border-radius: 8px !important;
+        border: none !important;
+        padding: 0.5rem 1rem !important;
     }
     .app-window .stButton > button:hover {
-        background-color: #29446c;
-        color: yellow;
+        background-color: #29446c !important;
+        color: yellow !important;
+    }
+    /* محاذاة النصوص داخل الحقول */
+    .app-window .stTextInput > div > input,
+    .app-window .stTextArea > div > textarea {
+        text-align: center !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<div class="app-window">', unsafe_allow_html=True)
+# --- بداية الصندوق الأزرق باستخدام container ---
+with st.container():
+    st.markdown('<div class="app-window">', unsafe_allow_html=True)
 
-# --- العنوان الرئيسي ---
-st.markdown("<h1>📥 منصة إيداع مذكرات التخرج</h1>", unsafe_allow_html=True)
-st.markdown("<p>جامعة محمد البشير الإبراهيمي - برج بوعريريج</p>", unsafe_allow_html=True)
-st.markdown("---")
+    st.markdown("<h1>📥 منصة إيداع مذكرات التخرج</h1>", unsafe_allow_html=True)
+    st.markdown("<p>جامعة محمد البشير الإبراهيمي - برج بوعريريج</p>", unsafe_allow_html=True)
+    st.markdown("---")
 
-df = load_data()
+    df = load_data()
 
-if "authenticated" not in st.session_state:
-    st.session_state.authenticated = False
-if "file_uploaded" not in st.session_state:
-    st.session_state.file_uploaded = False
+    if "authenticated" not in st.session_state:
+        st.session_state.authenticated = False
+    if "file_uploaded" not in st.session_state:
+        st.session_state.file_uploaded = False
 
-if not st.session_state.authenticated:
-    note_number = st.text_input("🔢 أدخل رقم المذكرة:")
-    password = st.text_input("🔐 أدخل كلمة السر:", type="password")
+    if not st.session_state.authenticated:
+        note_number = st.text_input("🔢 أدخل رقم المذكرة:")
+        password = st.text_input("🔐 أدخل كلمة السر:", type="password")
 
-    if st.button("✅ تحقق"):
-        if not note_number or not password:
-            st.warning("⚠️ الرجاء إدخال رقم المذكرة وكلمة السر.")
-        else:
-            already_submitted, submission_date = is_already_submitted(note_number)
-            if already_submitted:
-                st.error(f"❌ المذكرة رقم {note_number} تم إيداعها بتاريخ: {submission_date}.")
+        if st.button("✅ تحقق"):
+            if not note_number or not password:
+                st.warning("⚠️ الرجاء إدخال رقم المذكرة وكلمة السر.")
             else:
-                memo_info = df[df["رقم المذكرة"].astype(str).str.strip() == str(note_number).strip()]
-                if memo_info.empty:
-                    st.error("❌ رقم المذكرة غير موجود.")
-                elif memo_info.iloc[0]["كلمة السر"] != password:
-                    st.error("❌ كلمة السر غير صحيحة.")
+                already_submitted, submission_date = is_already_submitted(note_number)
+                if already_submitted:
+                    st.error(f"❌ المذكرة رقم {note_number} تم إيداعها بتاريخ: {submission_date}.")
                 else:
-                    st.session_state.authenticated = True
-                    st.session_state.note_number = note_number
-                    st.success("✅ تم التحقق بنجاح.")
-else:
-    st.success(f"✅ مرحبًا! رقم المذكرة: {st.session_state.note_number}")
+                    memo_info = df[df["رقم المذكرة"].astype(str).str.strip() == str(note_number).strip()]
+                    if memo_info.empty:
+                        st.error("❌ رقم المذكرة غير موجود.")
+                    elif memo_info.iloc[0]["كلمة السر"] != password:
+                        st.error("❌ كلمة السر غير صحيحة.")
+                    else:
+                        st.session_state.authenticated = True
+                        st.session_state.note_number = note_number
+                        st.success("✅ تم التحقق بنجاح.")
+    else:
+        st.success(f"✅ مرحبًا! رقم المذكرة: {st.session_state.note_number}")
 
-    expected_name = f"{st.session_state.note_number}.pdf"
-    st.markdown(f"### ⚠️ اسم الملف المطلوب:\n```\n{expected_name}\n```\n📌 الرجاء رفع الملف بهذا الاسم فقط.")
+        expected_name = f"{st.session_state.note_number}.pdf"
+        st.markdown(f"### ⚠️ اسم الملف المطلوب:\n```\n{expected_name}\n```\n📌 الرجاء رفع الملف بهذا الاسم فقط.")
 
-    uploaded_file = st.file_uploader("📤 رفع ملف المذكرة (PDF فقط)", type="pdf")
+        uploaded_file = st.file_uploader("📤 رفع ملف المذكرة (PDF فقط)", type="pdf")
 
-    if uploaded_file and not st.session_state.file_uploaded:
-        filename = uploaded_file.name
+        if uploaded_file and not st.session_state.file_uploaded:
+            filename = uploaded_file.name
 
-        if filename != expected_name:
-            st.error(f"❌ اسم الملف غير صحيح. يجب أن يكون `{expected_name}`.")
-            st.stop()
+            if filename != expected_name:
+                st.error(f"❌ اسم الملف غير صحيح. يجب أن يكون `{expected_name}`.")
+                st.stop()
 
-        temp_filename = f"temp_memo_{st.session_state.note_number}.pdf"
-        with open(temp_filename, "wb") as f:
-            f.write(uploaded_file.getbuffer())
+            temp_filename = f"temp_memo_{st.session_state.note_number}.pdf"
+            with open(temp_filename, "wb") as f:
+                f.write(uploaded_file.getbuffer())
 
-        with st.spinner("⏳ جاري رفع الملف..."):
-            file_id = upload_to_drive(temp_filename, st.session_state.note_number)
+            with st.spinner("⏳ جاري رفع الملف..."):
+                file_id = upload_to_drive(temp_filename, st.session_state.note_number)
 
-        if os.path.exists(temp_filename):
-            os.remove(temp_filename)
+            if os.path.exists(temp_filename):
+                os.remove(temp_filename)
 
-        if file_id:
-            updated = update_submission_status(st.session_state.note_number)
-            if updated:
-                st.success("✅ تم إيداع المذكرة وتحديث الحالة بنجاح!")
-                st.session_state.file_uploaded = True
-                st.markdown(f"📎 معرف الملف على Drive: `{file_id}`")
+            if file_id:
+                updated = update_submission_status(st.session_state.note_number)
+                if updated:
+                    st.success("✅ تم إيداع المذكرة وتحديث الحالة بنجاح!")
+                    st.session_state.file_uploaded = True
+                    st.markdown(f"📎 معرف الملف على Drive: `{file_id}`")
+                else:
+                    st.error("❌ فشل تحديث حالة الإيداع.")
             else:
-                st.error("❌ فشل تحديث حالة الإيداع.")
-        else:
-            st.error("❌ فشل رفع الملف إلى Drive.")
+                st.error("❌ فشل رفع الملف إلى Drive.")
 
-    elif st.session_state.file_uploaded:
-        st.info("📌 تم رفع الملف مسبقًا.")
+        elif st.session_state.file_uploaded:
+            st.info("📌 تم رفع الملف مسبقًا.")
 
-    if st.session_state.file_uploaded:
-        st.download_button(
-            label="📄 تحميل وصل الإيداع",
-            data=f"وصل تأكيد إيداع\nرقم المذكرة: {st.session_state.note_number}\nتاريخ الإيداع: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n\nللاتصال: domaine.dsp@univ-bba.dz\nتوقيع مسؤول الميدان",
-            file_name="وصل_الإيداع.txt",
-            mime="text/plain"
-        )
+        if st.session_state.file_uploaded:
+            st.download_button(
+                label="📄 تحميل وصل الإيداع",
+                data=f"وصل تأكيد إيداع\nرقم المذكرة: {st.session_state.note_number}\nتاريخ الإيداع: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n\nللاتصال: domaine.dsp@univ-bba.dz\nتوقيع مسؤول الميدان",
+                file_name="وصل_الإيداع.txt",
+                mime="text/plain"
+            )
 
-st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 st.markdown("""<p style='text-align:center; color:gray; margin-top:2rem;'>للاتصال: domaine.dsp@univ-bba.dz<br>توقيع مسؤول الميدان</p>""", unsafe_allow_html=True)
