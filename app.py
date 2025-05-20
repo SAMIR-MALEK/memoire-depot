@@ -127,24 +127,27 @@ st.markdown("""
     .app-window {
         background-color: #0b1a35;
         color: white;
-        max-width: 400px;
-        margin: auto;
-        padding: 2rem;
+        max-width: 450px;
+        margin: 3rem auto;
+        padding: 2rem 3rem;
         border-radius: 16px;
-        box-shadow: 0 0 12px rgba(0,0,0,0.2);
+        box-shadow: 0 0 15px rgba(0,0,0,0.3);
     }
-    .app-window h1, .app-window h2, .app-window h3 {
+    .app-window h1, .app-window h2, .app-window h3, .app-window p {
         color: gold;
         text-align: center;
+        margin-bottom: 1rem;
     }
-    .stTextInput > div > div > input,
-    .stTextInput > div > div > textarea,
-    .stFileUploader > div,
-    .stButton > button {
+    .app-window .stTextInput input,
+    .app-window .stTextArea textarea,
+    .app-window .stFileUploader,
+    .app-window .stButton > button {
         background-color: #1f2f4a;
         color: white;
+        border-radius: 8px;
+        border: none;
     }
-    .stButton > button:hover {
+    .app-window .stButton > button:hover {
         background-color: #29446c;
         color: yellow;
     }
@@ -155,7 +158,7 @@ st.markdown('<div class="app-window">', unsafe_allow_html=True)
 
 # --- العنوان الرئيسي ---
 st.markdown("<h1>📥 منصة إيداع مذكرات التخرج</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center;'>جامعة محمد البشير الإبراهيمي - برج بوعريريج</p>", unsafe_allow_html=True)
+st.markdown("<p>جامعة محمد البشير الإبراهيمي - برج بوعريريج</p>", unsafe_allow_html=True)
 st.markdown("---")
 
 df = load_data()
@@ -190,13 +193,7 @@ else:
     st.success(f"✅ مرحبًا! رقم المذكرة: {st.session_state.note_number}")
 
     expected_name = f"{st.session_state.note_number}.pdf"
-    st.markdown(f"""
-    ### ⚠️ اسم الملف المطلوب:
-    ```
-    {expected_name}
-    ```
-    📌 الرجاء رفع الملف بهذا الاسم فقط.
-    """)
+    st.markdown(f"### ⚠️ اسم الملف المطلوب:\n```\n{expected_name}\n```\n📌 الرجاء رفع الملف بهذا الاسم فقط.")
 
     uploaded_file = st.file_uploader("📤 رفع ملف المذكرة (PDF فقط)", type="pdf")
 
@@ -239,6 +236,6 @@ else:
             mime="text/plain"
         )
 
-# --- التذييل ---
 st.markdown("</div>", unsafe_allow_html=True)
-st.markdown("""<p style='text-align:center; color:gray;'>للاتصال: domaine.dsp@univ-bba.dz<br>توقيع مسؤول الميدان</p>""", unsafe_allow_html=True)
+
+st.markdown("""<p style='text-align:center; color:gray; margin-top:2rem;'>للاتصال: domaine.dsp@univ-bba.dz<br>توقيع مسؤول الميدان</p>""", unsafe_allow_html=True)
