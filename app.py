@@ -1,5 +1,3 @@
-إليك الكود العالمي الكامل كما حفظته سابقًا:
-
 import streamlit as st
 from datetime import datetime
 import os
@@ -249,6 +247,3 @@ if st.session_state.get("reset_app"):
         if key in st.session_state:
             del st.session_state[key]
     st.experimental_rerun()
-
-إذا أردت تعديلات أو إضافات عليه، فقط أخبرني.
-
