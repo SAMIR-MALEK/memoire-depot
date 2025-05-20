@@ -123,16 +123,23 @@ st.set_page_config(page_title="إيداع مذكرات التخرج", page_icon=
 with open("style.css") as f:
     st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-# --- عرض شعار الجامعة ---
-st.image("logo.png", width=200)
+# --- عرض شعار الجامعة إن وُجد ---
+if os.path.exists("كلية الحقوق-01.png"):
+    st.image("كلية الحقوق-01.png", width=200)
+else:
+    st.markdown("<h3 style='text-align:center;'>🎓 جامعة برج بوعريريج</h3>", unsafe_allow_html=True)
 
 # --- العنوان الرئيسي ---
-st.markdown("<h1 style='text-align:center; color:#4B8BBE;'>🎓 منصة إيداع مذكرات التخرج</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align:center; color:#4B8BBE;'>📥 منصة إيداع التخرج</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align:center; font-size:18px;'>جامعة برج بوعريريج</p>", unsafe_allow_html=True)
 st.markdown("---")
 
 # --- تحميل بيانات الطلبة ---
-df = load_data()
+@st.cache_data
+def get_data():
+    return load_data()
+
+df = get_data()
 
 # --- إدارة حالة الجلسة ---
 if "authenticated" not in st.session_state:
