@@ -171,12 +171,8 @@ else:
     📌 الرجاء رفع الملف بهذا الاسم فقط.
     """)
 
-    # --- تصميم واجهة رفع الملف ---
-    st.markdown("<div class='container'>", unsafe_allow_html=True)
-    st.markdown("<h2>📝 رفع ملف المذكرة (PDF فقط)</h2>", unsafe_allow_html=True)
-    st.markdown("<p>(اختيار الملف)</p>", unsafe_allow_html=True)
-
-    uploaded_file = st.file_uploader("", type="pdf", key="file_uploader")
+    # --- رفع الملف ---
+    uploaded_file = st.file_uploader("📤 رفع ملف المذكرة (PDF فقط)", type="pdf", key="file_uploader")
 
     if uploaded_file and not st.session_state.file_uploaded:
         filename = uploaded_file.name
@@ -224,8 +220,6 @@ else:
             file_name="وصل_الإيداع.txt",
             mime="text/plain"
         )
-
-    st.markdown("</div>", unsafe_allow_html=True)
 
 # --- إعادة التشغيل ---
 if st.session_state.get("reset_app"):
