@@ -211,7 +211,7 @@ else:
     # بيانات الطالبين والمشرف بخط أصغر
     st.markdown(f"""
     <p style='font-size:18px'>
-    <strong>الطالب الأول: </strong> {memo['الطالب الأول']}<br>
+    <strong style='text-align:center>الطالب الأول: </strong> {memo['الطالب الأول']}<br>
     <strong>الطالب الثاني:  </strong> {memo['الطالب الثاني']}<br>
     <strong>الأستاذ المشرف: </strong> {memo['الأستاذ']}
     </p>
