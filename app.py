@@ -1,9 +1,11 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime
 import os
+import re
 import fitz  # PyMuPDF
+from datetime import datetime
 
+# --- مكتبات Google API ---
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
@@ -117,9 +119,8 @@ def upload_to_drive(filepath, note_number):
         st.error(f"❌ خطأ في رفع الملف إلى Google Drive: {e}")
         return None
 
-# --- واجهة Streamlit ---
+# --- واجهة المستخدم ---
 st.set_page_config(page_title="إيداع مذكرات التخرج", page_icon="📥", layout="centered")
-
 st.markdown("<h1 style='text-align:center; color:#4B8BBE;'>📥 منصة إيداع التخرج</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align:center; font-size:18px;'>جامعة برج بوعريريج</p>", unsafe_allow_html=True)
 st.markdown("---")
@@ -158,17 +159,31 @@ if not st.session_state.authenticated:
 
 else:
     st.success(f"✅ مرحبًا! رقم المذكرة: {st.session_state.note_number}")
+    st.warning("⚠️ يرجى العلم أن اسم الملف يجب أن يكون بلاتينية فقط.")
+    st.info("✅ سيتم إعادة تسمية الملف تلقائيًا إن احتوى على حروف غير لاتينية.")
+
     uploaded_file = st.file_uploader("📤 رفع ملف المذكرة (PDF فقط)", type="pdf", key="file_uploader")
 
     if uploaded_file and not st.session_state.file_uploaded:
+        original_name = uploaded_file.name
+
+        # --- التحقق من اسم الملف ---
+        if not re.match(r'^[\w\.-]+\.pdf$', original_name, re.UNICODE):
+            st.warning("🔄 اسم الملف يحتوي على حروف غير لاتينية. سيتم إعادة تسمية الملف تلقائيًا...")
+
+            safe_name = f"temp_file_{hash(original_name)}.pdf"
+        else:
+            safe_name = original_name
+
         temp_original = f"temp_original_{st.session_state.note_number}.pdf"
         temp_fixed = f"temp_fixed_{st.session_state.note_number}.pdf"
 
+        # --- حفظ الملف مؤقتًا ---
         with open(temp_original, "wb") as f:
             f.write(uploaded_file.getbuffer())
 
         try:
-            # --- معالجة الملف ---
+            # --- معالجة الملف بصيغة آمنة ---
             doc = fitz.open(temp_original)
             doc.save(temp_fixed)
             doc.close()
@@ -189,12 +204,15 @@ else:
             else:
                 st.error("❌ فشل رفع الملف إلى Drive.")
 
-            # --- تنظيف الملفات المؤقتة ---
-            os.remove(temp_original)
-            os.remove(temp_fixed)
-
         except Exception as e:
             st.error(f"❌ حدث خطأ أثناء معالجة الملف: {e}")
+
+        finally:
+            # --- تنظيف الملفات المؤقتة ---
+            if os.path.exists(temp_original):
+                os.remove(temp_original)
+            if os.path.exists(temp_fixed):
+                os.remove(temp_fixed)
 
     elif st.session_state.file_uploaded:
         st.info("📌 تم رفع الملف وتحديث الحالة مسبقًا.")
@@ -209,7 +227,7 @@ else:
             mime="text/plain"
         )
 
-# --- تنفيذ إعادة التهيئة بعد rerun ---
+# --- إعادة التشغيل ---
 if st.session_state.get("reset_app"):
     for key in ["authenticated", "note_number", "file_uploaded", "reset_app"]:
         if key in st.session_state:
