@@ -206,14 +206,14 @@ else:
     st.markdown("---")
     
     # العنوان بخط كبير
-    st.markdown(f"<h4>📝 عنوان المذكرة:</h4><p style='font-size:22px'>{memo['عنوان المذكرة']}</p>", unsafe_allow_html=True)
+    st.markdown(f"<h4>📝 عنوان المذكرة:</h4><p style='font-size:18px'>{memo['عنوان المذكرة']}</p>", unsafe_allow_html=True)
     
     # بيانات الطالبين والمشرف بخط أصغر
     st.markdown(f"""
-    <p style='font-size:18px'>
-    <strong style='text-align:center>الطالب الأول: </strong> {memo['الطالب الأول']}<br>
-    <strong>الطالب الثاني:  </strong> {memo['الطالب الثاني']}<br>
-    <strong>الأستاذ المشرف: </strong> {memo['الأستاذ']}
+    <p style='font-size:16px'>
+    👨‍🎓 <strong>الطالب الأول:</strong> {memo['الطالب الأول']}<br>
+    👨‍🎓 <strong>الطالب الثاني:</strong> {memo['الطالب الثاني']}<br>
+    👨‍🏫 <strong>الأستاذ المشرف:</strong> {memo['الأستاذ']}
     </p>
     """, unsafe_allow_html=True)
     
