@@ -172,13 +172,17 @@ st.markdown("""
 
 from PIL import Image
 
-st.markdown("""
-    <div style="text-align: center;">
-""", unsafe_allow_html=True)
+from PIL import Image
 
+logo = Image.open("logo.png")
 st.image(logo, width=70)
 
-st.markdown("</div>", unsafe_allow_html=True)
+st.markdown("""
+    <div style="text-align:center;">
+       
+    </div>
+""", unsafe_allow_html=True)
+
 
 
 # --- العنوان الرئيسي ---
