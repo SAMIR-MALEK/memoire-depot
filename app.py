@@ -119,7 +119,7 @@ def upload_to_drive(filepath, note_number):
 
 # --- واجهة المستخدم ---
 st.set_page_config(page_title="إيداع مذكرات التخرج", page_icon="📥", layout="centered")
-st.markdown("<h1 style='text-align:center; color:#4B8BBE;'>📥 منصة إيداع التخرج</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align:center; color:#4B8BBE;'>📥 منصة ---- التخرج</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align:center; font-size:18px;'>جامعة برج بوعريريج</p>", unsafe_allow_html=True)
 st.markdown("---")
 
