@@ -7,7 +7,7 @@ from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 
-# Google API setup - استبدل بالمفاتيح الخاصة بك
+# --- إعداد الاتصال بـ Google Sheets و Google Drive ---
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets',
           'https://www.googleapis.com/auth/drive']
 
@@ -17,9 +17,12 @@ credentials = Credentials.from_service_account_info(info, scopes=SCOPES)
 drive_service = build('drive', 'v3', credentials=credentials)
 sheets_service = build('sheets', 'v4', credentials=credentials)
 
+# --- معرف الشيت ومجلد الدرايف ---
 SPREADSHEET_ID = "1Ycx-bUscF7rEpse4B5lC4xCszYLZ8uJyPJLp6bFK8zo"
 DRIVE_FOLDER_ID = "1TfhvUA9oqvSlj9TuLjkyHi5xsC5svY1D"
 
+# --- تحميل البيانات من Google Sheets ---
+@st.cache_data(ttl=300)
 def load_data():
     try:
         result = sheets_service.spreadsheets().values().get(
@@ -36,6 +39,7 @@ def load_data():
         st.error(f"❌ خطأ في تحميل البيانات من Google Sheets: {e}")
         st.stop()
 
+# --- التحقق مما إذا تم الإيداع مسبقًا ---
 def is_already_submitted(note_number):
     try:
         result = sheets_service.spreadsheets().values().get(
@@ -57,6 +61,7 @@ def is_already_submitted(note_number):
         st.error(f"❌ خطأ في التحقق من حالة الإيداع: {e}")
         return False, None
 
+# --- تحديث حالة الإيداع في Google Sheets ---
 def update_submission_status(note_number):
     try:
         result = sheets_service.spreadsheets().values().get(
@@ -92,6 +97,7 @@ def update_submission_status(note_number):
         st.error(f"❌ فشل تحديث حالة الإيداع: {e}")
         return False
 
+# --- رفع ملف PDF إلى Google Drive باسم memoire_رقم_المذكرة ---
 def upload_to_drive(filepath, note_number):
     try:
         new_name = f"memoire_{note_number}.pdf"
@@ -110,18 +116,13 @@ def upload_to_drive(filepath, note_number):
         st.error(f"❌ خطأ في رفع الملف إلى Google Drive: {e}")
         return None
 
-# إعداد صفحة مركزية بعرض محدد
+# --- إعداد التصميم العام ---
+
 st.set_page_config(page_title="إيداع مذكرات التخرج", layout="centered")
 
-# --- CSS شامل لتغليف كامل الصفحة داخل صندوق أزرق مع تنسيق الحقول ---
 st.markdown("""
 <style>
-/* خلفية الصفحة */
-body, .main {
-    background-color: white !important;
-}
-
-/* الصندوق الأزرق المركزي */
+/* الخلفية البيضاء خارج الصندوق */
 section.main > div.block-container {
     max-width: 480px;
     margin: 3rem auto 4rem auto !important;
@@ -134,20 +135,13 @@ section.main > div.block-container {
     font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
 
-/* عناوين داخل الصندوق */
-h1, h2, h3, p {
-    color: gold !important;
-    text-align: center;
-    margin-bottom: 1rem;
-}
-
-/* عناصر الإدخال */
+/* حقول الإدخال ورفع الملفات */
 div.stTextInput > div > input,
+div.stTextArea > div > textarea,
 div.stFileUploader > div > label,
 div.stFileUploader > div > input,
 div.stButton > button,
-div.stTextInput > div > input:focus,
-div.stTextArea > div > textarea {
+div.stTextInput > div > input:focus {
     background-color: #1f2f4a !important;
     color: white !important;
     border-radius: 8px !important;
@@ -156,41 +150,30 @@ div.stTextArea > div > textarea {
     text-align: center !important;
 }
 
-/* زر الرفع عند التمرير */
+/* زر الرفع hover */
 div.stButton > button:hover {
     background-color: #29446c !important;
     color: yellow !important;
 }
 
-/* تحجيم العناصر */
+/* مسافة بين الحقول */
 div.stTextInput, div.stFileUploader, div.stButton {
     margin-bottom: 1.5rem !important;
 }
 
-/* وضع محتويات upload button عرضيا في الوسط */
-div.stFileUploader > div > label {
-    display: block;
-    margin: 0 auto 1rem auto;
-}
-
-/* رسائل الخطأ والنجاح */
-div[data-testid="stError"], div[data-testid="stSuccess"], div[data-testid="stWarning"], div[data-testid="stInfo"] {
+/* العناوين */
+h1, h2, h3, p {
+    color: gold !important;
     text-align: center;
-    font-weight: bold;
     margin-bottom: 1rem;
-}
-
-/* مركز تحميل الملف */
-div[role="list"] {
-    max-width: 100% !important;
 }
 </style>
 """, unsafe_allow_html=True)
 
-# --- محتوى التطبيق ---
-st.markdown("<h1>📥 منصة إيداع مذكرات التخرج</h1>", unsafe_allow_html=True)
-st.markdown("<p>جامعة محمد البشير الإبراهيمي - برج بوعريريج</p>", unsafe_allow_html=True)
-st.markdown("---")
+# --- المحتوى ---
+
+st.title("📥 منصة إيداع مذكرات التخرج")
+st.write("جامعة محمد البشير الإبراهيمي - برج بوعريريج")
 
 df = load_data()
 
@@ -224,7 +207,8 @@ else:
     st.success(f"✅ مرحبًا! رقم المذكرة: {st.session_state.note_number}")
 
     expected_name = f"{st.session_state.note_number}.pdf"
-    st.markdown(f"### ⚠️ اسم الملف المطلوب:\n```\n{expected_name}\n```\n📌 الرجاء رفع الملف بهذا الاسم فقط.")
+    st.markdown(f"### ⚠️ اسم الملف المطلوب:\n```\n{expected_name}\n```")
+    st.markdown("📌 الرجاء رفع الملف بهذا الاسم فقط.")
 
     uploaded_file = st.file_uploader("📤 رفع ملف المذكرة (PDF فقط)", type="pdf")
 
@@ -267,4 +251,7 @@ else:
             mime="text/plain"
         )
 
-st.markdown("""<p style='text-align:center; color:gray; margin-top:2rem;'>للاتصال: domaine.dsp@univ-bba.dz<br>توقيع مسؤول الميدان</p>""", unsafe_allow_html=True)
+# --- تذييل الصفحة ---
+st.markdown("""<p style='text-align:center; color:gray; margin-top: 3rem;'>
+للاتصال: domaine.dsp@univ-bba.dz<br>توقيع مسؤول الميدان
+</p>""", unsafe_allow_html=True)
