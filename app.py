@@ -150,7 +150,7 @@ if not st.session_state.authenticated:
                 else:
                     st.session_state.authenticated = True
                     st.session_state.note_number = note_number
-                    st.success("✅ تم التحقق بنجاح، يمكنك رفع المذكرة الآن.")
+                    st.success("✅ تم التحقق بنجاح.      ، يمكنك رفع المذكرة الآن.")
 
 else:
     st.success(f"✅ مرحبًا! رقم المذكرة: {st.session_state.note_number}")
