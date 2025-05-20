@@ -166,7 +166,6 @@ else:
     ```
     {expected_name}
     ```
-    📌 الرجاء رفع الملف بهذا الاسم فقط.
     """)
 
     uploaded_file = st.file_uploader("📤 رفع ملف المذكرة (PDF فقط)", type="pdf", key="file_uploader")
