@@ -182,8 +182,9 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- العنوان الرئيسي ---
-st.markdown("<h1 style='text-align:center; color:#4B8BBE;'>📥 منصة إيداع التخرج</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align:center; color:#4B8BBE;'>📥 منصة إيداع مذكرات التخرج</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align:center; font-size:18px;'>جامعة برج بوعريريج</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center; font-size:18px;'>كلية الحقوق والعلوم السياسية</p>", unsafe_allow_html=True)
 st.markdown("---")
 
 # --- تحميل بيانات الطلبة ---
