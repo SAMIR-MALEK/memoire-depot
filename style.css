@@ -1,0 +1,111 @@
+/* ملف التنسيق: style.css */
+
+/* الخلفية العامة والخطوط */
+body {
+    background-color: #0d1117; /* خلفية داكنة */
+    color: #ffffff;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* العناوين */
+h1, h2, h3 {
+    color: #4B8BBE; /* لون أزرق فاتح مثل شعار Streamlit */
+}
+
+/* الحاوية المركزية */
+.container {
+    max-width: 600px;
+    margin: auto;
+    padding: 20px;
+    border-radius: 10px;
+    background-color: #161b22;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+}
+
+/* عنوان الصفحة */
+.title {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+/* زر التحقق */
+button[kind="primary"] {
+    background-color: #4B8BBE;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+button[kind="primary"]:hover {
+    background-color: #3a6fa9;
+}
+
+/* حقول الإدخال */
+input[type="text"], input[type="password"] {
+    width: 100%;
+    padding: 10px;
+    margin-top: 5px;
+    margin-bottom: 15px;
+    border-radius: 6px;
+    border: 1px solid #4B8BBE;
+    background-color: #0d1117;
+    color: white;
+}
+
+/* تصميم رفع الملف */
+.file-uploader {
+    border: 2px dashed #4B8BBE;
+    border-radius: 10px;
+    padding: 30px;
+    text-align: center;
+    color: #4B8BBE;
+    transition: background-color 0.3s ease;
+}
+
+.file-uploader:hover {
+    background-color: #1a1e25;
+}
+
+.upload-icon {
+    font-size: 48px;
+    color: #4B8BBE;
+    margin-bottom: 10px;
+}
+
+/* الرسائل والتنبيهات */
+.stAlert {
+    background-color: #24292e;
+    color: #ff6666;
+    border-left: 5px solid #ff6666;
+    padding: 10px 20px;
+    border-radius: 6px;
+}
+
+.stSuccess {
+    background-color: #24292e;
+    color: #6aff6a;
+    border-left: 5px solid #6aff6a;
+    padding: 10px 20px;
+    border-radius: 6px;
+}
+
+.stInfo {
+    background-color: #1a1e25;
+    color: #4B8BBE;
+    border-left: 5px solid #4B8BBE;
+    padding: 10px 20px;
+    border-radius: 6px;
+}
+
+/* نصوص الكود */
+pre {
+    background-color: #1a1e25;
+    color: #4B8BBE;
+    padding: 10px;
+    border-radius: 6px;
+    overflow-x: auto;
+}
