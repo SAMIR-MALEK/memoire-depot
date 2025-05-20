@@ -116,19 +116,26 @@ def upload_to_drive(filepath, note_number):
         st.error(f"❌ خطأ في رفع الملف إلى Google Drive: {e}")
         return None
 
-# --- إعداد التصميم ---
+# --- إعداد التصميم العام ---
 st.set_page_config(page_title="إيداع مذكرات التخرج", layout="centered")
+
 st.markdown("""
     <style>
     body {
+        background-color: white !important;
+    }
+    .app-window {
         background-color: #0b1a35;
         color: white;
+        max-width: 400px;
+        margin: auto;
+        padding: 2rem;
+        border-radius: 16px;
+        box-shadow: 0 0 12px rgba(0,0,0,0.2);
     }
-    .stApp {
-        background-color: #0b1a35;
-    }
-    h1, h2, h3, h4, h5, h6 {
+    .app-window h1, .app-window h2, .app-window h3 {
         color: gold;
+        text-align: center;
     }
     .stTextInput > div > div > input,
     .stTextInput > div > div > textarea,
@@ -142,11 +149,13 @@ st.markdown("""
         color: yellow;
     }
     </style>
-    """, unsafe_allow_html=True)
+""", unsafe_allow_html=True)
+
+st.markdown('<div class="app-window">', unsafe_allow_html=True)
 
 # --- العنوان الرئيسي ---
-st.markdown("<h1 style='text-align:center;'>📥 منصة إيداع مذكرات التخرج</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center; font-size:18px;'>جامعة محمد البشير الإبراهيمي - برج بوعريريج</p>", unsafe_allow_html=True)
+st.markdown("<h1>📥 منصة إيداع مذكرات التخرج</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center;'>جامعة محمد البشير الإبراهيمي - برج بوعريريج</p>", unsafe_allow_html=True)
 st.markdown("---")
 
 df = load_data()
@@ -177,12 +186,13 @@ if not st.session_state.authenticated:
                     st.session_state.authenticated = True
                     st.session_state.note_number = note_number
                     st.success("✅ تم التحقق بنجاح.")
-
 else:
     st.success(f"✅ مرحبًا! رقم المذكرة: {st.session_state.note_number}")
 
     expected_name = f"{st.session_state.note_number}.pdf"
-    st.markdown(f"### ⚠️ اسم الملف المطلوب:\n```\n{expected_name}\n```\n📌 الرجاء رفع الملف بهذا الاسم فقط.")
+    st.markdown(f"### ⚠️ اسم الملف المطلوب:\n```
+{expected_name}
+```\n📌 الرجاء رفع الملف بهذا الاسم فقط.")
 
     uploaded_file = st.file_uploader("📤 رفع ملف المذكرة (PDF فقط)", type="pdf")
 
@@ -220,18 +230,11 @@ else:
     if st.session_state.file_uploaded:
         st.download_button(
             label="📄 تحميل وصل الإيداع",
-            data=f"""وصل تأكيد إيداع
-
-رقم المذكرة: {st.session_state.note_number}
-تاريخ الإيداع: {datetime.now().strftime('%Y-%m-%d %H:%M')}
-
-للاتصال: domaine.dsp@univ-bba.dz
-توقيع مسؤول الميدان
-""",
+            data=f"وصل تأكيد إيداع\nرقم المذكرة: {st.session_state.note_number}\nتاريخ الإيداع: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n\nللاتصال: domaine.dsp@univ-bba.dz\nتوقيع مسؤول الميدان",
             file_name="وصل_الإيداع.txt",
             mime="text/plain"
         )
 
 # --- التذييل ---
-st.markdown("""---""")
-st.markdown("<p style='text-align:center; color:gray;'>للاتصال: domaine.dsp@univ-bba.dz<br>توقيع مسؤول الميدان</p>", unsafe_allow_html=True)
+st.markdown("</div>", unsafe_allow_html=True)
+st.markdown("""<p style='text-align:center; color:gray;'>للاتصال: domaine.dsp@univ-bba.dz<br>توقيع مسؤول الميدان</p>""", unsafe_allow_html=True)
