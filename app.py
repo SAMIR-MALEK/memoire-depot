@@ -37,38 +37,35 @@ def sanitize_text(text): return re.sub(r'[^A-Za-z0-9]+', '_', text)
 
 def get_access_token(): credentials = service_account.Credentials.from_service_account_info( st.secrets["service_account"], scopes=["https://www.googleapis.com/auth/drive"] ) auth_req = google.auth.transport.requests.Request() credentials.refresh(auth_req) return credentials.token
 
-def upload_to_drive(uploaded_file, note_number): try: access_token = get_access_token() safe_name = f"MEMOIRE_N{sanitize_text(str(note_number))}.pdf"
+import tempfile
+import os
 
-headers = {
-        "Authorization": f"Bearer {access_token}"
-    }
+def upload_to_drive(file, note_number):
+    try:
+        # إنشاء اسم آمن للملف
+        safe_name = f"MEMOIRE_N{sanitize_text(str(note_number))}.pdf"
 
-    metadata = {
-        'name': safe_name,
-        'parents': [DRIVE_FOLDER_ID],
-        'mimeType': 'application/pdf'
-    }
+        # إنشاء ملف مؤقت بامتداد .pdf
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+            tmp.write(file.read())
+            tmp_path = tmp.name
 
-    files = {
-        'metadata': ('metadata', json.dumps(metadata), 'application/json'),
-        'file': uploaded_file
-    }
+        # إعادة فتح الملف المؤقت لرفعه
+        with open(tmp_path, "rb") as f:
+            media = MediaIoBaseUpload(f, mimetype='application/pdf', resumable=True)
+            file_metadata = {
+                'name': safe_name,
+                'parents': [DRIVE_FOLDER_ID]
+            }
+            uploaded = drive_service.files().create(body=file_metadata, media_body=media, fields='id').execute()
 
-    response = requests.post(
-        "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart",
-        headers=headers,
-        files=files
-    )
+        # حذف الملف المؤقت
+        os.remove(tmp_path)
+        return uploaded.get('id')
 
-    if response.status_code == 200:
-        file_id = response.json()["id"]
-        return file_id
-    else:
-        st.error(f"❌ فشل الرفع: {response.status_code} - {response.text}")
+    except Exception as e:
+        st.error(f"❌ خطأ في رفع الملف إلى Google Drive: {e}")
         return None
-except Exception as e:
-    st.error(f"❌ استثناء أثناء رفع الملف: {e}")
-    return None
 
 --- واجهة Streamlit ---
 
