@@ -36,7 +36,7 @@ def load_data():
         df = pd.DataFrame(values[1:], columns=values[0])
         return df
     except Exception as e:
-        st.error(f"❌ خطأ في تحميل البيانات من Google Sheets: {e}")
+        st.error(f"❌ خطأ في تحميل البيانات: {e}")
         st.stop()
 
 # --- التحقق مما إذا تم الإيداع مسبقًا ---
@@ -48,20 +48,20 @@ def is_already_submitted(note_number):
         ).execute()
         values = result.get('values', [])
         df = pd.DataFrame(values[1:], columns=values[0])
-        memo = df[df["رقم المذكرة"].astype(str).str.strip() == str(note_number).strip()]
+        memo = df[df["\u0631\u0642\u0645 \u0627\u0644\u0645\u0630\u0643\u0631\u0629"].astype(str).str.strip() == str(note_number).strip()]
         if memo.empty:
             return False, None
-        deposit_status = memo.iloc[0]["تم الإيداع"]
-        submission_date = memo.iloc[0]["تاريخ الإيداع"]
+        deposit_status = memo.iloc[0]["\u062a\u0645 \u0627\u0644\u0625\u064a\u062f\u0627\u0639"]
+        submission_date = memo.iloc[0]["\u062a\u0627\u0631\u064a\u062e \u0627\u0644\u0625\u064a\u062f\u0627\u0639"]
         if (isinstance(deposit_status, str) and deposit_status.strip() == "نعم") or \
            (isinstance(submission_date, str) and submission_date.strip() != ""):
             return True, submission_date
         return False, None
     except Exception as e:
-        st.error(f"❌ خطأ في التحقق من حالة الإيداع: {e}")
+        st.error(f"❌ خطأ في التحقق: {e}")
         return False, None
 
-# --- تحديث حالة الإيداع في Google Sheets ---
+# --- تحديث حالة الإيداع ---
 def update_submission_status(note_number):
     try:
         result = sheets_service.spreadsheets().values().get(
@@ -71,20 +71,20 @@ def update_submission_status(note_number):
         values = result.get('values', [])
         df = pd.DataFrame(values[1:], columns=values[0])
 
-        row_idx = df[df["رقم المذكرة"].astype(str).str.strip() == str(note_number).strip()].index
+        row_idx = df[df["\u0631\u0642\u0645 \u0627\u0644\u0645\u0630\u0643\u0631\u0629"].astype(str).str.strip() == str(note_number).strip()].index
         if row_idx.empty:
-            st.error("❌ رقم المذكرة غير موجود في الشيت أثناء التحديث.")
+            st.error("❌ رقم المذكرة غير موجود.")
             return False
 
         idx = row_idx[0] + 2
         col_names = df.columns.tolist()
-        deposit_col = col_names.index("تم الإيداع") + 1
-        date_col = col_names.index("تاريخ الإيداع") + 1
+        deposit_col = col_names.index("\u062a\u0645 \u0627\u0644\u0625\u064a\u062f\u0627\u0639") + 1
+        date_col = col_names.index("\u062a\u0627\u0631\u064a\u062e \u0627\u0644\u0625\u064a\u062f\u0627\u0639") + 1
 
         updates = {
             "valueInputOption": "USER_ENTERED",
             "data": [
-                {"range": f"Feuille 1!{chr(64+deposit_col)}{idx}", "values": [["نعم"]]},
+                {"range": f"Feuille 1!{chr(64+deposit_col)}{idx}", "values": [["\u0646\u0639\u0645"]]},
                 {"range": f"Feuille 1!{chr(64+date_col)}{idx}", "values": [[datetime.now().strftime('%Y-%m-%d %H:%M')]]},
             ]
         }
@@ -94,10 +94,10 @@ def update_submission_status(note_number):
         ).execute()
         return True
     except Exception as e:
-        st.error(f"❌ فشل تحديث حالة الإيداع: {e}")
+        st.error(f"❌ فشل التحديث: {e}")
         return False
 
-# --- رفع ملف PDF إلى Google Drive باسم memoire_رقم_المذكرة ---
+# --- رفع الملف إلى Google Drive ---
 def upload_to_drive(filepath, note_number):
     try:
         new_name = f"memoire_{note_number}.pdf"
@@ -113,29 +113,25 @@ def upload_to_drive(filepath, note_number):
         ).execute()
         return uploaded.get('id')
     except Exception as e:
-        st.error(f"❌ خطأ في رفع الملف إلى Google Drive: {e}")
+        st.error(f"❌ خطأ في رفع الملف: {e}")
         return None
 
-# --- إعداد التصميم العام ---
-
+# --- إعداد الصفحة وتصميمها ---
 st.set_page_config(page_title="إيداع مذكرات التخرج", layout="centered")
 
 st.markdown("""
 <style>
-/* الخلفية البيضاء خارج الصندوق */
-section.main > div.block-container {
-    max-width: 480px;
-    margin: 3rem auto 4rem auto !important;
+body {
     background-color: #0b1a35;
-    padding: 2rem 3rem 3rem 3rem;
-    border-radius: 16px;
+}
+section.main > div.block-container {
+    max-width: 100% !important;
+    padding: 2rem !important;
+    background-color: transparent !important;
     color: white;
-    box-shadow: 0 0 15px rgba(0,0,0,0.3);
     direction: rtl;
     font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
-
-/* حقول الإدخال ورفع الملفات */
 div.stTextInput > div > input,
 div.stTextArea > div > textarea,
 div.stFileUploader > div > label,
@@ -149,19 +145,13 @@ div.stTextInput > div > input:focus {
     padding: 0.5rem 1rem !important;
     text-align: center !important;
 }
-
-/* زر الرفع hover */
 div.stButton > button:hover {
     background-color: #29446c !important;
     color: yellow !important;
 }
-
-/* مسافة بين الحقول */
 div.stTextInput, div.stFileUploader, div.stButton {
     margin-bottom: 1.5rem !important;
 }
-
-/* العناوين */
 h1, h2, h3, p {
     color: gold !important;
     text-align: center;
@@ -170,6 +160,9 @@ h1, h2, h3, p {
 </style>
 """, unsafe_allow_html=True)
 
+# --- المحتوى الرئيسي ---
+st.title("📅 منصة إيداع مذكرات التخرج")
+st.write("جامعة محمد البشير الإبراهيمي - برج بوعريريج")
 # --- المحتوى ---
 
 st.title("📥 منصة إيداع مذكرات التخرج")
