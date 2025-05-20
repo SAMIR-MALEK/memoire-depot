@@ -1,9 +1,12 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
+import os
+import fitz  # PyMuPDF
+
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
-from googleapiclient.http import MediaFileUpload  # استخدام MediaFileUpload
+from googleapiclient.http import MediaFileUpload
 
 # --- إعداد الاتصال بـ Google Sheets و Google Drive ---
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets ',
@@ -158,28 +161,40 @@ else:
     uploaded_file = st.file_uploader("📤 رفع ملف المذكرة (PDF فقط)", type="pdf", key="file_uploader")
 
     if uploaded_file and not st.session_state.file_uploaded:
-        # حفظ الملف باسم إنجليزي ثابت لتجنب المشاكل
-        temp_filename = f"temp_memo_{st.session_state.note_number}.pdf"
-        with open(temp_filename, "wb") as f:
+        temp_original = f"temp_original_{st.session_state.note_number}.pdf"
+        temp_fixed = f"temp_fixed_{st.session_state.note_number}.pdf"
+
+        with open(temp_original, "wb") as f:
             f.write(uploaded_file.getbuffer())
 
-        with st.spinner("⏳ جاري رفع الملف..."):
-            file_id = upload_to_drive(temp_filename, st.session_state.note_number)
+        try:
+            # --- معالجة الملف ---
+            doc = fitz.open(temp_original)
+            doc.save(temp_fixed)
+            doc.close()
 
-        # حذف الملف المؤقت بعد الرفع
-        if os.path.exists(temp_filename):
-            os.remove(temp_filename)
+            st.info("🔄 جاري رفع الملف المعالج...")
 
-        if file_id:
-            updated = update_submission_status(st.session_state.note_number)
-            if updated:
-                st.success("✅ تم إيداع المذكرة وتحديث الحالة بنجاح!")
-                st.markdown(f"📎 معرف الملف على Drive: `{file_id}`")
-                st.session_state.file_uploaded = True
+            # --- رفع الملف ---
+            file_id = upload_to_drive(temp_fixed, st.session_state.note_number)
+
+            if file_id:
+                updated = update_submission_status(st.session_state.note_number)
+                if updated:
+                    st.success("✅ تم إيداع المذكرة وتحديث الحالة بنجاح!")
+                    st.markdown(f"📎 معرف الملف على Drive: `{file_id}`")
+                    st.session_state.file_uploaded = True
+                else:
+                    st.error("❌ فشل تحديث حالة الإيداع.")
             else:
-                st.error("❌ فشل تحديث حالة الإيداع في الشيت.")
-        else:
-            st.error("❌ فشل رفع الملف.")
+                st.error("❌ فشل رفع الملف إلى Drive.")
+
+            # --- تنظيف الملفات المؤقتة ---
+            os.remove(temp_original)
+            os.remove(temp_fixed)
+
+        except Exception as e:
+            st.error(f"❌ حدث خطأ أثناء معالجة الملف: {e}")
 
     elif st.session_state.file_uploaded:
         st.info("📌 تم رفع الملف وتحديث الحالة مسبقًا.")
