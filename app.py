@@ -162,7 +162,7 @@ else:
     expected_name = f"{note_number}.pdf"
 
     st.markdown(f"""
-    ### ⚠️ اسم الملف المطلوب:
+    ### ⚠️ قم بتسمية ملف المذكرة بهذا الاسم قبل رفعها
     ```
     {expected_name}
     ```
