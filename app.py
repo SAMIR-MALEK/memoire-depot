@@ -1,18 +1,17 @@
 import streamlit as st
 from datetime import datetime
 import os
-import streamlit as st
-st.set_page_config(page_title="منصة إيداع المذكرات", page_icon="📚", layout="centered")
 import pandas as pd
-from google.oauth2 import service_account
+from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
-from google.oauth2.service_account import Credentials
+from PIL import Image
 
+st.set_page_config(page_title="منصة إيداع المذكرات", page_icon="📚", layout="centered")
 
 # --- إعداد الاتصال بـ Google Sheets و Google Drive ---
-SCOPES = ['https://www.googleapis.com/auth/spreadsheets ',
-          'https://www.googleapis.com/auth/drive ']
+SCOPES = ['https://www.googleapis.com/auth/spreadsheets',
+          'https://www.googleapis.com/auth/drive']
 
 info = st.secrets["service_account"]
 credentials = Credentials.from_service_account_info(info, scopes=SCOPES)
@@ -26,9 +25,6 @@ DRIVE_FOLDER_ID = "1TfhvUA9oqvSlj9TuLjkyHi5xsC5svY1D"
 
 # --- تحميل البيانات من Google Sheets ---
 @st.cache_data(ttl=300)
-
-
-
 def load_data():
     try:
         result = sheets_service.spreadsheets().values().get(
@@ -166,29 +162,22 @@ st.markdown("""
         width: 70px;
         margin-bottom: 10px;
     }
+    /* ===== تعديل لتوسيط كل الصور ===== */
+    div[data-testid="stImage"] {
+        display: flex;
+        justify-content: center;
+    }
     </style>
 """, unsafe_allow_html=True)
 
 
-from PIL import Image
-
-from PIL import Image
-
 logo = Image.open("logo.png")
 st.image(logo, width=70)
-
-st.markdown("""
-    <div style="text-align:center;">
-       
-    </div>
-""", unsafe_allow_html=True)
-
 
 
 # --- العنوان الرئيسي ---
 st.markdown("<h1 style='text-align:center; color:#4B8BBE;'>📥 منصة إيداع مذكرات التخرج</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align:center; font-size:24px;'>جامعة محمد البشير الإبراهيمي - برج بوعريريج</p>", unsafe_allow_html=True)
-
 st.markdown("<p style='text-align:center; font-size:24px;'>كلية الحقوق والعلوم السياسية</p>", unsafe_allow_html=True)
 st.markdown("---")
 
@@ -266,32 +255,4 @@ else:
             os.remove(temp_filename)
 
         if file_id:
-            updated = update_submission_status(note_number)
-            if updated:
-                st.success("✅ تم إيداع المذكرة وتحديث الحالة بنجاح!")
-                st.markdown(f"📎 معرف الملف على Drive: {file_id}")
-                st.session_state.file_uploaded = True
-            else:
-                st.error("❌ فشل تحديث حالة الإيداع.")
-        else:
-            st.error("❌ فشل رفع الملف إلى Drive.")
-
-    elif st.session_state.file_uploaded:
-        st.info("📌 تم رفع الملف وتحديث الحالة مسبقًا.")
-
-    if st.session_state.file_uploaded:
-        st.success("✅ تم رفع الملف وتحديث حالة الإيداع بنجاح.")
-        st.info("📌 لا حاجة لأي خطوة إضافية. يمكنك الآن إغلاق الصفحة أو تحميل وصل الإيداع.")
-        st.download_button(
-            label="📄 تحميل وصل الإيداع",
-            data=f"وصل تأكيد إيداع\nرقم المذكرة: {st.session_state.note_number}\nتاريخ الإيداع: {datetime.now().strftime('%Y-%m-%d %H:%M')}",
-            file_name="وصل_الإيداع.txt",
-            mime="text/plain"
-        )
-
-# --- إعادة التشغيل ---
-if st.session_state.get("reset_app"):
-    for key in ["authenticated", "note_number", "file_uploaded", "reset_app"]:
-        if key in st.session_state:
-            del st.session_state[key]
-    st.experimental_rerun()
+            updated =
