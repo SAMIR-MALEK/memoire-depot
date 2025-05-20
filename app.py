@@ -1,16 +1,13 @@
 import streamlit as st
 import pandas as pd
-import io
-import re
-import os
 from datetime import datetime
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
-from googleapiclient.http import MediaFileUpload  # ملاحظة: MediaFileUpload بدل MediaIoBaseUpload
+from googleapiclient.http import MediaFileUpload  # استخدام MediaFileUpload
 
 # --- إعداد الاتصال بـ Google Sheets و Google Drive ---
-SCOPES = ['https://www.googleapis.com/auth/spreadsheets',
-          'https://www.googleapis.com/auth/drive']
+SCOPES = ['https://www.googleapis.com/auth/spreadsheets ',
+          'https://www.googleapis.com/auth/drive ']
 
 info = st.secrets["service_account"]
 credentials = Credentials.from_service_account_info(info, scopes=SCOPES)
@@ -98,16 +95,20 @@ def update_submission_status(note_number):
         st.error(f"❌ فشل تحديث حالة الإيداع: {e}")
         return False
 
-# --- رفع ملف PDF إلى Google Drive مع تسمية آمنة من ملف مؤقت ---
+# --- رفع ملف PDF إلى Google Drive باسم memoire_رقم_المذكرة ---
 def upload_to_drive(filepath, note_number):
     try:
-        new_name = f"MEMOIRE_N{note_number}.pdf"
+        new_name = f"memoire_{note_number}.pdf"
         media = MediaFileUpload(filepath, mimetype='application/pdf', resumable=True)
         file_metadata = {
             'name': new_name,
             'parents': [DRIVE_FOLDER_ID]
         }
-        uploaded = drive_service.files().create(body=file_metadata, media_body=media, fields='id').execute()
+        uploaded = drive_service.files().create(
+            body=file_metadata,
+            media_body=media,
+            fields='id'
+        ).execute()
         return uploaded.get('id')
     except Exception as e:
         st.error(f"❌ خطأ في رفع الملف إلى Google Drive: {e}")
@@ -116,7 +117,7 @@ def upload_to_drive(filepath, note_number):
 # --- واجهة Streamlit ---
 st.set_page_config(page_title="إيداع مذكرات التخرج", page_icon="📥", layout="centered")
 
-st.markdown("<h1 style='text-align:center; color:#4B8BBE;'>📥 منصة .       التخرج</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align:center; color:#4B8BBE;'>📥 منصة إيداع التخرج</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align:center; font-size:18px;'>جامعة برج بوعريريج</p>", unsafe_allow_html=True)
 st.markdown("---")
 
@@ -150,14 +151,14 @@ if not st.session_state.authenticated:
                 else:
                     st.session_state.authenticated = True
                     st.session_state.note_number = note_number
-                    st.success("✅ تم التحقق بنجاح.      ، يمكنك رفع المذكرة الآن.")
+                    st.success("✅ تم التحقق بنجاح. يمكنك الآن رفع المذكرة.")
 
 else:
     st.success(f"✅ مرحبًا! رقم المذكرة: {st.session_state.note_number}")
     uploaded_file = st.file_uploader("📤 رفع ملف المذكرة (PDF فقط)", type="pdf", key="file_uploader")
 
     if uploaded_file and not st.session_state.file_uploaded:
-        # حفظ الملف مؤقتًا باسم إنجليزي ثابت
+        # حفظ الملف باسم إنجليزي ثابت لتجنب المشاكل
         temp_filename = f"temp_memo_{st.session_state.note_number}.pdf"
         with open(temp_filename, "wb") as f:
             f.write(uploaded_file.getbuffer())
