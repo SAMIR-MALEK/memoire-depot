@@ -117,8 +117,17 @@ def upload_to_drive(filepath, note_number):
         return None
 
 # --- واجهة المستخدم ---
-st.set_page_config(page_title="إيداع مذكرات التخرج", page_icon="📥", layout="centered")
-st.markdown("<h1 style='text-align:center; color:#4B8BBE;'>📥 منصة... التخرج</h1>", unsafe_allow_html=True)
+st.set_page_config(page_title="إيداع مذكرات التخرج", page_icon="🎓", layout="centered")
+
+# --- استيراد CSS ---
+with open("style.css") as f:
+    st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+
+# --- عرض شعار الجامعة ---
+st.image("logo.png", width=200)
+
+# --- العنوان الرئيسي ---
+st.markdown("<h1 style='text-align:center; color:#4B8BBE;'>🎓 منصة إيداع التخرج</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align:center; font-size:18px;'>جامعة برج بوعريريج</p>", unsafe_allow_html=True)
 st.markdown("---")
 
@@ -162,13 +171,19 @@ else:
     expected_name = f"{note_number}.pdf"
 
     st.markdown(f"""
-    ### ⚠️ قم بتسمية ملف المذكرة بهذا الاسم قبل رفعها
+    ### ⚠️ اسم الملف المطلوب:
     ```
     {expected_name}
     ```
+    📌 الرجاء رفع الملف بهذا الاسم فقط.
     """)
 
-    uploaded_file = st.file_uploader("📤 رفع ملف المذكرة (PDF فقط)", type="pdf", key="file_uploader")
+    # --- تصميم واجهة رفع الملف ---
+    st.markdown("<div class='container'>", unsafe_allow_html=True)
+    st.markdown("<h2>📝 رفع ملف المذكرة (PDF فقط)</h2>", unsafe_allow_html=True)
+    st.markdown("<p>(اختيار الملف)</p>", unsafe_allow_html=True)
+
+    uploaded_file = st.file_uploader("", type="pdf", key="file_uploader")
 
     if uploaded_file and not st.session_state.file_uploaded:
         filename = uploaded_file.name
@@ -216,6 +231,8 @@ else:
             file_name="وصل_الإيداع.txt",
             mime="text/plain"
         )
+
+    st.markdown("</div>", unsafe_allow_html=True)
 
 # --- إعادة التشغيل ---
 if st.session_state.get("reset_app"):
