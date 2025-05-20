@@ -3,15 +3,13 @@ import pandas as pd
 from datetime import datetime
 import os
 
-
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 
 # --- إعداد الاتصال بـ Google Sheets و Google Drive ---
-SCOPES = ['https://www.googleapis.com/auth/spreadsheets',
-          'https://www.googleapis.com/auth/drive']
-
+SCOPES = ['https://www.googleapis.com/auth/spreadsheets ',
+          'https://www.googleapis.com/auth/drive ']
 
 info = st.secrets["service_account"]
 credentials = Credentials.from_service_account_info(info, scopes=SCOPES)
@@ -124,11 +122,16 @@ st.set_page_config(page_title="إيداع مذكرات التخرج", layout="ce
 
 st.markdown("""
 <style>
-/* الخلفية البيضاء خارج الصندوق */
+/* الخلفية العامة للصفحة بيضاء */
+body {
+    background-color: white;
+}
+
+/* الحاوية الداخلية (المربع الأزرق الداكن) */
 section.main > div.block-container {
     max-width: 480px;
     margin: 3rem auto 4rem auto !important;
-    background-color: #0b1a35;
+    background-color: #0b1a35; /* أزرق داكن */
     padding: 2rem 3rem 3rem 3rem;
     border-radius: 16px;
     color: white;
@@ -144,7 +147,7 @@ div.stFileUploader > div > label,
 div.stFileUploader > div > input,
 div.stButton > button,
 div.stTextInput > div > input:focus {
-    background-color: #1f2f4a !important;
+    background-color: #1f2f4a !important; /* أزرق متوسط */
     color: white !important;
     border-radius: 8px !important;
     border: none !important;
@@ -154,7 +157,7 @@ div.stTextInput > div > input:focus {
 
 /* زر الرفع hover */
 div.stButton > button:hover {
-    background-color: #29446c !important;
+    background-color: #29446c !important; /* أزرق فاتح عند hover */
     color: yellow !important;
 }
 
