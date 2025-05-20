@@ -154,10 +154,8 @@ st.markdown("""
 st.markdown('<div class="app-window">', unsafe_allow_html=True)
 
 # --- العنوان الرئيسي ---
-st.markdown("<h1>📥  منصة إيداع مذكرات التخرج السنة ماستر2</h1>", unsafe_allow_html=True)
-
+st.markdown("<h1>📥 منصة إيداع مذكرات التخرج</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align:center;'>جامعة محمد البشير الإبراهيمي - برج بوعريريج</p>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center;'>كلية الحقوق والعلوم السياسية</p>", unsafe_allow_html=True)
 st.markdown("---")
 
 df = load_data()
@@ -192,9 +190,13 @@ else:
     st.success(f"✅ مرحبًا! رقم المذكرة: {st.session_state.note_number}")
 
     expected_name = f"{st.session_state.note_number}.pdf"
-    st.markdown(f"### ⚠️ اسم الملف المطلوب:\n```
-{expected_name}
-```\n📌 الرجاء رفع الملف بهذا الاسم فقط.")
+    st.markdown(f"""
+    ### ⚠️ اسم الملف المطلوب:
+    ```
+    {expected_name}
+    ```
+    📌 الرجاء رفع الملف بهذا الاسم فقط.
+    """)
 
     uploaded_file = st.file_uploader("📤 رفع ملف المذكرة (PDF فقط)", type="pdf")
 
