@@ -197,10 +197,21 @@ if not st.session_state.authenticated:
                 else:
                     st.session_state.authenticated = True
                     st.session_state.note_number = note_number
+                    st.session_state.memo_data = memo_info.iloc[0]
                     st.success("✅ تم التحقق بنجاح.")
 
 else:
     st.success(f"✅ مرحبًا! رقم المذكرة: {st.session_state.note_number}")
+    memo = st.session_state.memo_data
+    st.markdown("---")
+    st.markdown(f"### 📝 عنوان المذكرة:\n{memo['عنوان المذكرة']}")
+    st.markdown(f"### 👨‍🎓 الطلبة:\n{memo['ألقاب وأسماء الطلبة']}")
+    st.markdown(f"### 👨‍🏫 المشرف:\n{memo['المشرف']}")
+    st.markdown("---")
+
+
+
+    
     note_number = st.session_state.note_number
     expected_name = f"{note_number}.pdf"
 
