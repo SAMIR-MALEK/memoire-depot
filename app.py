@@ -154,8 +154,10 @@ st.markdown("""
 st.markdown('<div class="app-window">', unsafe_allow_html=True)
 
 # --- العنوان الرئيسي ---
-st.markdown("<h1>📥 منصة إيداع مذكرات التخرج</h1>", unsafe_allow_html=True)
+st.markdown("<h1>📥  منصة إيداع مذكرات التخرج السنة ماستر2</h1>", unsafe_allow_html=True)
+
 st.markdown("<p style='text-align:center;'>جامعة محمد البشير الإبراهيمي - برج بوعريريج</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center;'>كلية الحقوق والعلوم السياسية</p>", unsafe_allow_html=True)
 st.markdown("---")
 
 df = load_data()
