@@ -1,11 +1,9 @@
 import streamlit as st
 import pandas as pd
 import os
-import re
-import fitz  # PyMuPDF
 from datetime import datetime
+import re
 
-# --- مكتبات Google API ---
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
@@ -125,7 +123,6 @@ st.markdown("<h1 style='text-align:center; color:#4B8BBE;'>📥 منصة إيد�
 st.markdown("<p style='text-align:center; font-size:18px;'>جامعة برج بوعريريج</p>", unsafe_allow_html=True)
 st.markdown("---")
 
-# --- تحميل بيانات الطلبة ---
 df = load_data()
 
 # --- إدارة حالة الجلسة ---
@@ -159,60 +156,63 @@ if not st.session_state.authenticated:
 
 else:
     st.success(f"✅ مرحبًا! رقم المذكرة: {st.session_state.note_number}")
-    st.warning("⚠️ يرجى العلم أن اسم الملف يجب أن يكون بلاتينية فقط.")
-    st.info("✅ سيتم إعادة تسمية الملف تلقائيًا إن احتوى على حروف غير لاتينية.")
+
+    # --- رسالة واضحة للمستخدم ---
+    st.markdown("""
+    ### ⚠️ ملاحظة مهمة:
+    قبل رفع الملف، **تأكد من تسمية الملف برقم المذكرة فقط** متبوعًا بامتداد `.pdf`.
+    
+    #### ✅ مثال:
+    ```
+    12345.pdf
+    ```
+    
+    #### ❌ أمثلة خاطئة:
+    ```
+    memoire.pdf
+    مذكرة التخرج.pdf
+    thesis_123.pdf
+    ```
+    """)
 
     uploaded_file = st.file_uploader("📤 رفع ملف المذكرة (PDF فقط)", type="pdf", key="file_uploader")
 
     if uploaded_file and not st.session_state.file_uploaded:
-        original_name = uploaded_file.name
+        filename = uploaded_file.name
+        note_number = st.session_state.note_number
 
         # --- التحقق من اسم الملف ---
-        if not re.match(r'^[\w\.-]+\.pdf$', original_name, re.UNICODE):
-            st.warning("🔄 اسم الملف يحتوي على حروف غير لاتينية. سيتم إعادة تسمية الملف تلقائيًا...")
-
-            safe_name = f"temp_file_{hash(original_name)}.pdf"
-        else:
-            safe_name = original_name
-
-        temp_original = f"temp_original_{st.session_state.note_number}.pdf"
-        temp_fixed = f"temp_fixed_{st.session_state.note_number}.pdf"
+        expected_name = f"{note_number}.pdf"
+        if filename != expected_name:
+            st.error(f"""
+            ❌ اسم الملف غير صحيح.
+            
+            يجب أن يكون اسم الملف: `{expected_name}`
+            """)
+            st.stop()
 
         # --- حفظ الملف مؤقتًا ---
-        with open(temp_original, "wb") as f:
+        temp_filename = f"temp_memo_{note_number}.pdf"
+        with open(temp_filename, "wb") as f:
             f.write(uploaded_file.getbuffer())
 
-        try:
-            # --- معالجة الملف بصيغة آمنة ---
-            doc = fitz.open(temp_original)
-            doc.save(temp_fixed)
-            doc.close()
+        with st.spinner("⏳ جاري رفع الملف..."):
+            file_id = upload_to_drive(temp_filename, note_number)
 
-            st.info("🔄 جاري رفع الملف المعالج...")
+        # حذف الملف المؤقت بعد الرفع
+        if os.path.exists(temp_filename):
+            os.remove(temp_filename)
 
-            # --- رفع الملف ---
-            file_id = upload_to_drive(temp_fixed, st.session_state.note_number)
-
-            if file_id:
-                updated = update_submission_status(st.session_state.note_number)
-                if updated:
-                    st.success("✅ تم إيداع المذكرة وتحديث الحالة بنجاح!")
-                    st.markdown(f"📎 معرف الملف على Drive: `{file_id}`")
-                    st.session_state.file_uploaded = True
-                else:
-                    st.error("❌ فشل تحديث حالة الإيداع.")
+        if file_id:
+            updated = update_submission_status(note_number)
+            if updated:
+                st.success("✅ تم إيداع المذكرة وتحديث الحالة بنجاح!")
+                st.markdown(f"📎 معرف الملف على Drive: `{file_id}`")
+                st.session_state.file_uploaded = True
             else:
-                st.error("❌ فشل رفع الملف إلى Drive.")
-
-        except Exception as e:
-            st.error(f"❌ حدث خطأ أثناء معالجة الملف: {e}")
-
-        finally:
-            # --- تنظيف الملفات المؤقتة ---
-            if os.path.exists(temp_original):
-                os.remove(temp_original)
-            if os.path.exists(temp_fixed):
-                os.remove(temp_fixed)
+                st.error("❌ فشل تحديث حالة الإيداع.")
+        else:
+            st.error("❌ فشل رفع الملف.")
 
     elif st.session_state.file_uploaded:
         st.info("📌 تم رفع الملف وتحديث الحالة مسبقًا.")
