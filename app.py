@@ -76,6 +76,7 @@ if st.button("تأكيد"):
         df = load_data()
         match = df[(df['رقم المذكرة'] == note_number) & (df['كلمة السر'] == password)]
 
+        
         if not match.empty:
             memo_info = match.iloc[0]
             st.success("✅ تم التحقق من المعلومات بنجاح")
