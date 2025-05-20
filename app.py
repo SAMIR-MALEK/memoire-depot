@@ -1,8 +1,7 @@
 import streamlit as st
 import pandas as pd
-import os
 from datetime import datetime
-import re
+import os
 
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
@@ -119,10 +118,11 @@ def upload_to_drive(filepath, note_number):
 
 # --- واجهة المستخدم ---
 st.set_page_config(page_title="إيداع مذكرات التخرج", page_icon="📥", layout="centered")
-st.markdown("<h1 style='text-align:center; color:#4B8BBE;'>📥 منص- التخرج</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align:center; color:#4B8BBE;'>📥 منصة إيداع التخرج</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align:center; font-size:18px;'>جامعة برج بوعريريج</p>", unsafe_allow_html=True)
 st.markdown("---")
 
+# --- تحميل بيانات الطلبة ---
 df = load_data()
 
 # --- إدارة حالة الجلسة ---
@@ -157,37 +157,28 @@ if not st.session_state.authenticated:
 else:
     st.success(f"✅ مرحبًا! رقم المذكرة: {st.session_state.note_number}")
 
-    # --- رسالة واضحة للمستخدم ---
-    st.markdown("""
-    ### ⚠️ ملاحظة مهمة:
-    قبل رفع الملف، **تأكد من تسمية الملف برقم المذكرة فقط** متبوعًا بامتداد `.pdf`.
-    
-    #### ✅ مثال:
+    # --- رسالة للمستخدم باسم الملف الصحيح ---
+    note_number = st.session_state.note_number
+    expected_name = f"{note_number}.pdf"
+
+    st.markdown(f"""
+    ### ⚠️ اسم الملف المطلوب:
     ```
-    12345.pdf
+    {expected_name}
     ```
-    
-    #### ❌ أمثلة خاطئة:
-    ```
-    memoire.pdf
-    مذكرة التخرج.pdf
-    thesis_123.pdf
-    ```
+    📌 الرجاء رفع الملف بهذا الاسم فقط.
     """)
 
     uploaded_file = st.file_uploader("📤 رفع ملف المذكرة (PDF فقط)", type="pdf", key="file_uploader")
 
     if uploaded_file and not st.session_state.file_uploaded:
         filename = uploaded_file.name
-        note_number = st.session_state.note_number
 
         # --- التحقق من اسم الملف ---
-        expected_name = f"{note_number}.pdf"
         if filename != expected_name:
             st.error(f"""
-            ❌ اسم الملف غير صحيح.
-            
-            يجب أن يكون اسم الملف: `{expected_name}`
+            ❌ اسم الملف غير صحيح.  
+            يجب أن تكون المذكرة باسم: `{expected_name}`
             """)
             st.stop()
 
@@ -199,7 +190,7 @@ else:
         with st.spinner("⏳ جاري رفع الملف..."):
             file_id = upload_to_drive(temp_filename, note_number)
 
-        # حذف الملف المؤقت بعد الرفع
+        # --- تنظيف الملف المؤقت ---
         if os.path.exists(temp_filename):
             os.remove(temp_filename)
 
@@ -212,7 +203,7 @@ else:
             else:
                 st.error("❌ فشل تحديث حالة الإيداع.")
         else:
-            st.error("❌ فشل رفع الملف.")
+            st.error("❌ فشل رفع الملف إلى Drive.")
 
     elif st.session_state.file_uploaded:
         st.info("📌 تم رفع الملف وتحديث الحالة مسبقًا.")
