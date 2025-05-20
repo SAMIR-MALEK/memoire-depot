@@ -169,9 +169,17 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+
+from PIL import Image
+
+logo = Image.open("logo.png")
+st.image(logo, width=70)
+
+
+
 st.markdown("""
     <div class="header-container">
-        <img src="https://drive.google.com/uc?id=1sBEUeqEF6tKTglXP3ePMtV4BN_929R9Y" class="header-logo">
+        
         <h2>📚 منصة إيداع مذكرات التخرج</h2>
         <h4>كلية الحقوق والعلوم السياسية</h4>
         <h5>جامعة برج بوعريريج</h5>
