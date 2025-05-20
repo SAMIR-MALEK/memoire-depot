@@ -225,7 +225,7 @@ else:
     note_number = st.session_state.note_number
     expected_name = f"{note_number}.pdf"
 
-    st.markdown(f"### تحميل المذكرة\n\n{expected_name}  يجب تسمية ملف المذكرة بالإسم ")
+    st.markdown(f"### تحميل المذكرة\n\n{expected_name} : يجب تسمية ملف المذكرة بالإسم ")
 
     uploaded_file = st.file_uploader("📤 رفع ملف المذكرة (PDF فقط)", type="pdf", key="file_uploader")
 
