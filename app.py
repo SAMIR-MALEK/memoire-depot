@@ -11,7 +11,10 @@ from PIL import Image
 st.set_page_config(page_title="منصة إيداع المذكرات", page_icon="📚", layout="centered")
 
 # تحديد تاريخ نهاية الإيداع
-deadline = datetime(2025, 6, 25, 23, 59)
+
+deadline = datetime(2025, 9, 15, 23, 59)
+
+
 if datetime.now() > deadline:
     st.error("❌ انتهت فترة إيداع المذكرات. الرجاء الاتصال بالإدارة لمزيد من المعلومات.")
     st.stop()
